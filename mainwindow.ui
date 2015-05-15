@@ -240,7 +240,7 @@
     <string>Remove</string>
    </property>
    <property name="shortcut">
-    <string notr="true">Ctrl+D, Ctrl+S, Ctrl+W</string>
+    <string>Ctrl+D</string>
    </property>
   </action>
   <action name="actionAbout">
