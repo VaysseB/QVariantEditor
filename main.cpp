@@ -5,13 +5,14 @@
 #include <QIcon>
 #include <QTranslator>
 
-
-#include "qvarianttree.h"
+#include "project.h"
 
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+    app.setApplicationName(PROJECT_NAME);
+    app.setApplicationVersion(STR_VERSION);
 
     // traduction
     QString locale = QLocale::system().name();
