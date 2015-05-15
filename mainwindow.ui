@@ -13,14 +13,14 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,8">
+     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1">
       <item>
        <widget class="QPushButton" name="buttonBack">
         <property name="focusPolicy">
          <enum>Qt::NoFocus</enum>
         </property>
         <property name="text">
-         <string>Back</string>
+         <string>Parent</string>
         </property>
         <property name="icon">
          <iconset theme="back">
@@ -227,7 +227,7 @@
     <string>Add</string>
    </property>
    <property name="shortcut">
-    <string notr="true"/>
+    <string notr="true">Ctrl+I</string>
    </property>
   </action>
   <action name="actionRemove">
@@ -240,7 +240,7 @@
     <string>Remove</string>
    </property>
    <property name="shortcut">
-    <string notr="true"/>
+    <string notr="true">Ctrl+D, Ctrl+S, Ctrl+W</string>
    </property>
   </action>
   <action name="actionAbout">

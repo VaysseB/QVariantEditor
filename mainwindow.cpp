@@ -4,6 +4,7 @@
 #include <QFileDialog>
 #include <QCloseEvent>
 
+#include "project.h"
 #include "qvarianttreeitemmodel.h"
 #include "qvariantitemdelegate.h"
 
@@ -74,11 +75,17 @@ MainWindow::~MainWindow()
 
 void MainWindow::about()
 {
-    QMessageBox::about(this,
-                       tr("QVariantEditor"),
-                       tr(
-                           "<h1>QVariantEditor</h1> is a file editor, made with QVariant.<br>\n"
-                           ));
+    QStringList author;
+    author << "Vaysse B.";
+
+    QStringList content;
+    content << (QString("<h2>") + PROJECT_NAME + "</h2>")
+               + tr("QVariant file explorer and editor.");
+    content << tr("Version: ") + STR_VERSION + tr(", Qt ") + QT_VERSION_STR;
+    content << "";
+    content << tr("Author(s): ") + author.join(", ");
+
+    QMessageBox::about(this, tr("QVariantEditor"), content.join("<br>\n"));
 }
 
 //------------------------------------------------------------------------------
@@ -252,11 +259,11 @@ QMessageBox::StandardButton MainWindow::askBeforeLoseDatas(
 void MainWindow::setTitle(QString title)
 {
     if (title.isNull())
-        setWindowTitle(tr("QVariantEditor"));
+        setWindowTitle(PROJECT_NAME);
     else if (title.isEmpty())
-        setWindowTitle(tr("new[*] - QVariantEditor"));
+        setWindowTitle(tr("new") + "[*] - " + PROJECT_NAME);
     else
-        setWindowTitle(tr("%1[*] - QVariantEditor").arg(title));
+        setWindowTitle(tr("%1").arg(title) + "[*] - " + PROJECT_NAME);
 
 }
 

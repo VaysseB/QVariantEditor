@@ -4,99 +4,125 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="mainwindow.cpp" line="78"/>
-        <location filename="mainwindow.cpp" line="255"/>
+        <location filename="mainwindow.cpp" line="88"/>
         <source>QVariantEditor</source>
         <translation>QVariantEditor</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="79"/>
         <source>&lt;h1&gt;QVariantEditor&lt;/h1&gt; is a file editor, made with QVariant.&lt;br&gt;
 </source>
-        <translation>&lt;h1&gt;QVariantEditor&lt;/h1&gt; is a file editor, made with QVariant.&lt;br&gt;
+        <translation type="vanished">&lt;h1&gt;QVariantEditor&lt;/h1&gt; is a file editor, made with QVariant.&lt;br&gt;
 </translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="141"/>
-        <location filename="mainwindow.cpp" line="157"/>
-        <location filename="mainwindow.cpp" line="212"/>
-        <location filename="mainwindow.cpp" line="224"/>
+        <location filename="mainwindow.cpp" line="83"/>
+        <source>QVariant file explorer and editor.</source>
+        <translation>Explorateur et editeur de fichier de QVariant.</translation>
+    </message>
+    <message>
+        <location filename="mainwindow.cpp" line="84"/>
+        <source>Version: </source>
+        <translation>Version: </translation>
+    </message>
+    <message>
+        <location filename="mainwindow.cpp" line="84"/>
+        <source>, Qt </source>
+        <translation>, Qt </translation>
+    </message>
+    <message>
+        <location filename="mainwindow.cpp" line="86"/>
+        <source>Author(s): </source>
+        <translation>Auteur(s): </translation>
+    </message>
+    <message>
+        <location filename="mainwindow.cpp" line="148"/>
+        <location filename="mainwindow.cpp" line="164"/>
+        <location filename="mainwindow.cpp" line="219"/>
+        <location filename="mainwindow.cpp" line="231"/>
         <source>Save datas</source>
         <translation>Sauvegarder</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="142"/>
-        <location filename="mainwindow.cpp" line="158"/>
+        <location filename="mainwindow.cpp" line="149"/>
+        <location filename="mainwindow.cpp" line="165"/>
         <source>Do you want to save changes ?</source>
         <translation>Voulez-vous enregister les modifications ?</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="163"/>
+        <location filename="mainwindow.cpp" line="170"/>
         <source>Open file</source>
         <translation>Ouvrir un fichier</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="167"/>
+        <location filename="mainwindow.cpp" line="174"/>
         <source>Loading from &quot;%1&quot; ...</source>
         <translation>Chargement de &quot;%1&quot; ...</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="179"/>
+        <location filename="mainwindow.cpp" line="186"/>
         <source>&quot;%1&quot; loaded.</source>
         <translation>&quot;%1&quot; chargé.</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="192"/>
+        <location filename="mainwindow.cpp" line="199"/>
         <source>Save file</source>
         <translation>Sauvegarder dans un fichier</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="197"/>
+        <location filename="mainwindow.cpp" line="204"/>
         <source>Saving to &quot;%1&quot; ...</source>
         <translation>Enregistrement dans &quot;%1&quot; ...</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="204"/>
+        <location filename="mainwindow.cpp" line="211"/>
         <source>&quot;%1&quot; saved.</source>
         <translation>&quot;%1&quot; enregistré.</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="213"/>
+        <location filename="mainwindow.cpp" line="220"/>
         <source>Do you want to save before closing ?</source>
         <translation>Voulez-vous enregister avant fermer ?</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="225"/>
+        <location filename="mainwindow.cpp" line="232"/>
         <source>Do you want to save before quit ?</source>
         <translation>Voulez-vous enregister avant de quitter ?</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="257"/>
+        <location filename="mainwindow.cpp" line="264"/>
+        <source>new</source>
+        <translation>nouveau</translation>
+    </message>
+    <message>
+        <location filename="mainwindow.cpp" line="266"/>
+        <source>%1</source>
+        <translation>%1</translation>
+    </message>
+    <message>
         <source>new[*] - QVariantEditor</source>
-        <translation>new[*] - QVariantEditor</translation>
+        <translation type="vanished">new[*] - QVariantEditor</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="259"/>
         <source>%1[*] - QVariantEditor</source>
-        <translation>%1[*] - QVariantEditor</translation>
+        <translation type="vanished">%1[*] - QVariantEditor</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="273"/>
+        <location filename="mainwindow.cpp" line="280"/>
         <source>Address: &lt;Root&gt;</source>
         <translation>Adresse: &lt;Root&gt;</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="277"/>
+        <location filename="mainwindow.cpp" line="284"/>
         <source>Address: </source>
         <translation>Adresse: </translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="277"/>
+        <location filename="mainwindow.cpp" line="284"/>
         <source> &gt; </source>
         <translation> &gt; </translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="321"/>
+        <location filename="mainwindow.cpp" line="328"/>
         <source>#%1</source>
         <translation>#%1</translation>
     </message>
@@ -133,8 +159,12 @@
 <context>
     <name>mainwindow</name>
     <message>
-        <location filename="mainwindow.ui" line="23"/>
         <source>Back</source>
+        <translation type="vanished">Remonter</translation>
+    </message>
+    <message>
+        <location filename="mainwindow.ui" line="23"/>
+        <source>Parent</source>
         <translation>Remonter</translation>
     </message>
     <message>
