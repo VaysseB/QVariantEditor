@@ -398,7 +398,8 @@ QVariant QVariantTree::fromFile(QString filename)
 void QVariantTree::toFile(QString filename, QVariant value)
 {
     QFile file(filename);
-    if (file.open(QFile::WriteOnly)) {
+    if (file.open(QIODevice::WriteOnly |
+                  QIODevice::Truncate)) {
         QVariantTree::toFile(&file, value);
         file.flush();
         file.close();

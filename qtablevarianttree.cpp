@@ -53,16 +53,16 @@ QTableVariantTree::QTableVariantTree(QWidget *parent) :
 
 void QTableVariantTree::clear()
 {
-    _selectedRowsPath.clear();
     selectionModel()->clear();
     _model.clear();
+    _selectedRowsPath.clear();
 }
 
 void QTableVariantTree::clearTree()
 {
-    _selectedRowsPath.clear();
     selectionModel()->clear();
     _model.clearTree();
+    _selectedRowsPath.clear();
 }
 
 //------------------------------------------------------------------------------
@@ -215,10 +215,12 @@ void QTableVariantTree::insertValue()
     // the current key
     QVariant key;
 
-    // creating the value
+    // creating the value (if empty table, invalid qvariant)
     QVariant newValue;
     if (row >= 0 && nbRows > 0)
         newValue = createValue(model()->rawData(row, model()->columnType()).type());
+
+    bool isModification = true;
 
     if (model()->tree().nodeIsList()) {
         // insertion after the current row
@@ -276,12 +278,15 @@ void QTableVariantTree::insertValue()
 
         key = itemStrKey;
     }
+    else
+        isModification = false;
 
-    model()->silentUpdateContentFromTree();
-    if (model()->rowCount() != nbRows) {
-        model()->updateTableAfterInsertDelete(nbRows);
 
+    if (isModification) {
         selectionModel()->clearSelection();
+
+        model()->updateModelFromTree();
+
         selectRow(row);
 
         emit model()->insertedValue(key);
@@ -298,13 +303,10 @@ void QTableVariantTree::deleteValue()
     std::sort(rows.begin(), rows.end());
     std::reverse(rows.begin(), rows.end());
 
-    int nbRows = model()->rowCount();
-
     if (model()->tree().nodeIsList()) {
         Q_FOREACH(int row, rows) {
             model()->tree().delItemList(row);
             emit model()->deletedValue(row);
-            model()->silentUpdateContentFromTree();
         }
     }
     else if (model()->tree().nodeIsCollection()) {
@@ -312,13 +314,13 @@ void QTableVariantTree::deleteValue()
         Q_FOREACH(int row, rows) {
             model()->tree().delItemCollection(keys.value(row));
             emit model()->deletedValue(keys.value(row));
-            model()->silentUpdateContentFromTree();
         }
     }
 
-    model()->updateTableAfterInsertDelete(nbRows);
-
     selectionModel()->clearSelection();
+
+    model()->updateModelFromTree();
+
     setCurrentIndex(QModelIndex());
 }
 

@@ -273,14 +273,9 @@ void QVariantItemDelegate::setModelData(QWidget *editor,
             QVariant value = model->tree().getItemList(oldRowIndex);
             model->tree().delItemList(oldRowIndex);
             model->tree().insertItemList(newRowIndex, value);
-            model->silentUpdateContentFromTree();
 
             // updating model
-            QModelIndex oldIndex = model->index(oldRowIndex, index.column());
-            if (oldIndex.row() > index.row())
-                emit model->dataChanged(index, oldIndex);
-            else
-                emit model->dataChanged(oldIndex, index);
+            model->updateModelFromTree();
 
             // updating others
             emit model->valueKeyChanged(newRowIndex, oldRowIndex);
@@ -303,7 +298,6 @@ void QVariantItemDelegate::setModelData(QWidget *editor,
             QVariant value = model->tree().getItemCollection(oldKey);
             model->tree().delItemCollection(oldKey);
             model->tree().setItemCollection(newKey, value);
-            model->silentUpdateContentFromTree();
 
             QStringList newCollectionKeys = model->tree().itemCollectionKeys();
 
@@ -325,7 +319,7 @@ void QVariantItemDelegate::setModelData(QWidget *editor,
             }
 
             // updating model
-            model->updateTableAfterInsertDelete(allKeys.count());
+            model->updateModelFromTree();
 
             // updating others
             emit model->valueKeyChanged(newKey, oldKey);

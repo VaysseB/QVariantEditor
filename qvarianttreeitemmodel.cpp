@@ -28,17 +28,13 @@ QVariantTreeItemModel::QVariantTreeItemModel(QObject *parent) :
 
 void QVariantTreeItemModel::open(QIODevice* file)
 {
-    int oldNbRow = rowCount();
-
     _tree.setFromFile(file);
 
-    updateTableAfterInsertDelete(oldNbRow);
+    updateModelFromTree();
 }
 
 void QVariantTreeItemModel::open(QString filename)
 {
-    int oldNbRow = rowCount();
-
     _tree.setFromFile(filename);
 
     // root must be list/collection to work
@@ -50,38 +46,33 @@ void QVariantTreeItemModel::open(QString filename)
         _tree.setRootContent(list);
     }
 
-    updateTableAfterInsertDelete(oldNbRow);
+    updateModelFromTree();
 }
 
 void QVariantTreeItemModel::setTreeContent(QVariant content)
 {
-    int oldNbRow = rowCount();
-
     _tree.setRootContent(content);
 
-    updateTableAfterInsertDelete(oldNbRow);
+    updateModelFromTree();
 }
 
 void QVariantTreeItemModel::moveToChild(const QVariant& key)
 {
-    int oldNbRow = rowCount();
-
     _tree.moveToNode(key);
 
-    updateTableAfterInsertDelete(oldNbRow);
+    updateModelFromTree();
 }
 
 void QVariantTreeItemModel::moveToParent()
 {
-    int oldNbRow = rowCount();
-
     _tree.moveToParent();
 
-    updateTableAfterInsertDelete(oldNbRow);
+    updateModelFromTree();
 }
 
-void QVariantTreeItemModel::updateTableAfterInsertDelete(int oldNbRow)
+void QVariantTreeItemModel::updateModelFromTree()
 {
+    int oldNbRow = rowCount();
     _isEmpty = false;
     int newNbRow = valueRowCount(_tree.nodeValue());
 
@@ -350,17 +341,17 @@ QString QVariantTreeItemModel::typeToString(const QVariant::Type& type) const
     return _typesName.value(type, tr("<unknown>"));
 }
 
-QString QVariantTreeItemModel::keyToString(const QVariant& key)
+QString QVariantTreeItemModel::keyToString(const QVariant& key) const
 {
     return stringify(key, 0);
 }
 
-QString QVariantTreeItemModel::valueToString(const QVariant& value)
+QString QVariantTreeItemModel::valueToString(const QVariant& value) const
 {
     return stringify(value, 3);
 }
 
-QString QVariantTreeItemModel::stringify(const QVariant& value, int depth)
+QString QVariantTreeItemModel::stringify(const QVariant& value, int depth) const
 {
     depth--;
 

@@ -13,7 +13,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::mainwindow),
     _permanentMessage(),
-    _currentFilename()
+    _currentFilePath()
 {
     ui->setupUi(this);
 
@@ -120,6 +120,7 @@ void MainWindow::clearStatusTemporaryMessage()
 void MainWindow::clearStatusPermanentMessage()
 {
     _permanentMessage.clear();
+    statusBar()->clearMessage();
 }
 
 //------------------------------------------------------------------------------
@@ -127,8 +128,9 @@ void MainWindow::clearStatusPermanentMessage()
 void MainWindow::clear()
 {
     ui->tableBrowser->clearTree();
-    _currentFilename.clear();
+    _currentFilePath.clear();
 
+    // reset title and modification flag
     setTitle();
     setWindowModified(false);
 }
@@ -166,50 +168,50 @@ void MainWindow::open()
                            QMessageBox::No) == QMessageBox::Cancel)
         return;
 
-    QString openFilename = _currentFilename;
+    QString openFilename = _currentFilePath;
     openFilename = QFileDialog::getOpenFileName(this, tr("Open file"), openFilename);
     if (!openFilename.isEmpty()) {
-        _currentFilename = openFilename;
+        _currentFilePath = openFilename;
 
-        showStatusMessage(tr("Loading from \"%1\" ...").arg(_currentFilename),
+        showStatusMessage(tr("Loading from \"%1\" ...").arg(_currentFilePath),
                           MainWindow::ShowTemporary);
 
-        model()->open(_currentFilename);
+        model()->open(_currentFilePath);
         ui->tableBrowser->adaptColumnWidth();
 
         setWindowModified(false);
-        setTitle(QDir(_currentFilename).path());
+        setTitle(QDir(_currentFilePath).dirName());
 
         reloadUI();
         reloadMenu();
 
         showStatusMessage(tr("\"%1\" loaded.")
-                          .arg(QDir(_currentFilename).dirName()),
+                          .arg(QDir(_currentFilePath).dirName()),
                           MainWindow::ShowTemporary, 2000);
     }
 }
 
 void MainWindow::save(bool force)
 {
-    if (!isSomeDatas())
+    if (model()->isEmpty())
         return;
 
-    QString saveFilename = _currentFilename;
+    QString saveFilename = _currentFilePath;
     if (saveFilename.isEmpty() || force) {
         saveFilename = QFileDialog::getSaveFileName(this, tr("Save file"), saveFilename);
     }
     if (!saveFilename.isEmpty()) {
-        _currentFilename = saveFilename;
+        _currentFilePath = saveFilename;
 
-        showStatusMessage(tr("Saving to \"%1\" ...").arg(_currentFilename),
+        showStatusMessage(tr("Saving to \"%1\" ...").arg(_currentFilePath),
                           MainWindow::ShowTemporary);
 
-        model()->save(_currentFilename);
+        model()->save(_currentFilePath);
         setWindowModified(false);
-        setTitle(QDir(_currentFilename).path());
+        setTitle(QDir(_currentFilePath).dirName());
 
         showStatusMessage(tr("\"%1\" saved.")
-                          .arg(QDir(_currentFilename).dirName()),
+                          .arg(QDir(_currentFilePath).dirName()),
                           MainWindow::ShowTemporary, 2000);
     }
 }
@@ -242,7 +244,7 @@ QMessageBox::StandardButton MainWindow::askBeforeLoseDatas(
         QMessageBox::StandardButton actionButton)
 {
     QMessageBox::StandardButton resp = QMessageBox::NoButton;
-    if (isWindowModified() && isSomeDatas()) {
+    if (isWindowModified() && !model()->isEmpty()) {
         resp = QMessageBox::question(this, title, question,
                                      QMessageBox::Save |
                                      QMessageBox::Cancel |
@@ -269,7 +271,7 @@ void MainWindow::setTitle(QString title)
 
 void MainWindow::reloadUI()
 {
-    if (isSomeDatas())
+    if (!model()->isEmpty())
     {
         ui->buttonBack->setEnabled(true);
         ui->labelNavigation->setEnabled(true);
@@ -297,7 +299,7 @@ void MainWindow::reloadUI()
 
 void MainWindow::reloadMenu()
 {
-    if (isSomeDatas())
+    if (!model()->isEmpty())
     {
         ui->actionSave->setEnabled(true);
         ui->actionSaveAs->setEnabled(true);
@@ -330,12 +332,6 @@ QStringList MainWindow::displayableAddress() const
         list << strKey;
     }
     return list;
-}
-
-bool MainWindow::isSomeDatas() const
-{
-    return (!_currentFilename.isEmpty() ||
-            model()->tree().rootContent().isValid());
 }
 
 //------------------------------------------------------------------------------

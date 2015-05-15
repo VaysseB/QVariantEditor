@@ -35,66 +35,66 @@
         <translation>Auteur(s): </translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="148"/>
-        <location filename="mainwindow.cpp" line="164"/>
-        <location filename="mainwindow.cpp" line="219"/>
-        <location filename="mainwindow.cpp" line="231"/>
+        <location filename="mainwindow.cpp" line="150"/>
+        <location filename="mainwindow.cpp" line="166"/>
+        <location filename="mainwindow.cpp" line="221"/>
+        <location filename="mainwindow.cpp" line="233"/>
         <source>Save datas</source>
         <translation>Sauvegarder</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="149"/>
-        <location filename="mainwindow.cpp" line="165"/>
+        <location filename="mainwindow.cpp" line="151"/>
+        <location filename="mainwindow.cpp" line="167"/>
         <source>Do you want to save changes ?</source>
         <translation>Voulez-vous enregister les modifications ?</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="170"/>
+        <location filename="mainwindow.cpp" line="172"/>
         <source>Open file</source>
         <translation>Ouvrir un fichier</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="174"/>
+        <location filename="mainwindow.cpp" line="176"/>
         <source>Loading from &quot;%1&quot; ...</source>
         <translation>Chargement de &quot;%1&quot; ...</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="186"/>
+        <location filename="mainwindow.cpp" line="188"/>
         <source>&quot;%1&quot; loaded.</source>
         <translation>&quot;%1&quot; chargé.</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="199"/>
+        <location filename="mainwindow.cpp" line="201"/>
         <source>Save file</source>
         <translation>Sauvegarder dans un fichier</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="204"/>
+        <location filename="mainwindow.cpp" line="206"/>
         <source>Saving to &quot;%1&quot; ...</source>
         <translation>Enregistrement dans &quot;%1&quot; ...</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="211"/>
+        <location filename="mainwindow.cpp" line="213"/>
         <source>&quot;%1&quot; saved.</source>
         <translation>&quot;%1&quot; enregistré.</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="220"/>
+        <location filename="mainwindow.cpp" line="222"/>
         <source>Do you want to save before closing ?</source>
         <translation>Voulez-vous enregister avant fermer ?</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="232"/>
+        <location filename="mainwindow.cpp" line="234"/>
         <source>Do you want to save before quit ?</source>
         <translation>Voulez-vous enregister avant de quitter ?</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="264"/>
+        <location filename="mainwindow.cpp" line="266"/>
         <source>new</source>
         <translation>nouveau</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="266"/>
+        <location filename="mainwindow.cpp" line="268"/>
         <source>%1</source>
         <translation>%1</translation>
     </message>
@@ -107,22 +107,22 @@
         <translation type="vanished">%1[*] - QVariantEditor</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="280"/>
+        <location filename="mainwindow.cpp" line="282"/>
         <source>Address: &lt;Root&gt;</source>
         <translation>Adresse: &lt;Root&gt;</translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="284"/>
+        <location filename="mainwindow.cpp" line="286"/>
         <source>Address: </source>
         <translation>Adresse: </translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="284"/>
+        <location filename="mainwindow.cpp" line="286"/>
         <source> &gt; </source>
         <translation> &gt; </translation>
     </message>
     <message>
-        <location filename="mainwindow.cpp" line="328"/>
+        <location filename="mainwindow.cpp" line="330"/>
         <source>#%1</source>
         <translation>#%1</translation>
     </message>
@@ -130,28 +130,28 @@
 <context>
     <name>QVariantTreeItemModel</name>
     <message>
-        <location filename="qvarianttreeitemmodel.cpp" line="173"/>
+        <location filename="qvarianttreeitemmodel.cpp" line="164"/>
         <source>&lt;no key/index&gt;</source>
         <translation>&lt;aucune clé/index&gt;</translation>
     </message>
     <message>
-        <location filename="qvarianttreeitemmodel.cpp" line="203"/>
+        <location filename="qvarianttreeitemmodel.cpp" line="194"/>
         <source>Type</source>
         <translation>Type</translation>
     </message>
     <message>
-        <location filename="qvarianttreeitemmodel.cpp" line="205"/>
+        <location filename="qvarianttreeitemmodel.cpp" line="196"/>
         <source>Key / Index</source>
         <translation>Clé / Index</translation>
     </message>
     <message>
-        <location filename="qvarianttreeitemmodel.cpp" line="207"/>
+        <location filename="qvarianttreeitemmodel.cpp" line="198"/>
         <source>Value / Content</source>
         <translation>Valeur / Contenu</translation>
     </message>
     <message>
-        <location filename="qvarianttreeitemmodel.cpp" line="350"/>
-        <location filename="qvarianttreeitemmodel.cpp" line="442"/>
+        <location filename="qvarianttreeitemmodel.cpp" line="341"/>
+        <location filename="qvarianttreeitemmodel.cpp" line="433"/>
         <source>&lt;unknown&gt;</source>
         <translation>&lt;inconnu(e)&gt;</translation>
     </message>
