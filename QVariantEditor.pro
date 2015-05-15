@@ -23,7 +23,8 @@ HEADERS  += mainwindow.h \
     qvarianttree.h \
     qvarianttreeitemmodel.h \
     qvariantitemdelegate.h \
-    qtablevarianttree.h
+    qtablevarianttree.h \
+    project.h
 
 FORMS    += mainwindow.ui
 
