@@ -4,6 +4,7 @@
 #include <QDesktopWidget>
 #include <QIcon>
 #include <QTranslator>
+#include <QLibraryInfo>
 
 #include "project.h"
 
@@ -16,10 +17,16 @@ int main(int argc, char *argv[])
 
     // traduction
     QString locale = QLocale::system().name();
-    QTranslator translator;
-    if (translator.load(QString("qve_") + locale,
-                        app.applicationDirPath()))
-        app.installTranslator(&translator);
+    QTranslator translatorQve;
+    if (translatorQve.load(QString("qve_") + locale,
+                           app.applicationDirPath()))
+        app.installTranslator(&translatorQve);
+    QTranslator translatorQt;
+    if (translatorQt.load(QString("qt_") + locale.section('_', 0, 0),
+                          QLibraryInfo::location(QLibraryInfo::TranslationsPath)) ||
+            translatorQt.load(QString("qt_") + locale.section('_', 0, 0),
+                              app.applicationDirPath()))
+        app.installTranslator(&translatorQt);
 
     // icon theme (if empty)
     if (QIcon::themeName().isEmpty())
