@@ -107,10 +107,13 @@ void QVariantTreeItemModel::clearTree()
 
 void QVariantTreeItemModel::clear()
 {
-    beginRemoveRows(QModelIndex(), 0, rowCount()-1);
+    int nbRows = rowCount();
+    if (nbRows > 0)
+        beginRemoveRows(QModelIndex(), 0, nbRows-1);
     _content.clear();
     _isEmpty = true;
-    endRemoveRows();
+    if (nbRows > 0)
+        endRemoveRows();
 }
 
 void QVariantTreeItemModel::silentUpdateContentFromTree()

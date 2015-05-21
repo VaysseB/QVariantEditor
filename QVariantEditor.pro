@@ -41,6 +41,4 @@ TradFile.path = $$OUT_PWD
 TradFile.files += qve_fr_FR.qm
 TradFile.files += $$[QT_INSTALL_TRANSLATIONS]/qt_fr.qm
 
-message($$[QT_INSTALL_TRANSLATIONS])
-
 INSTALLS += TradFile
