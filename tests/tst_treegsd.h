@@ -28,6 +28,8 @@ private Q_SLOTS:
     void test03GetContainerList();
     void test04SetWithoutContainer();
     void test05SetContainerList();
+    void test06DelWithoutContainer();
+    void test07DelContainerList();
 
 private:
     template <typename T>

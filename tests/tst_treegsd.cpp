@@ -99,7 +99,6 @@ void TreeGSD::test03GetContainerList()
 
 void TreeGSD::test04SetWithoutContainer()
 {
-    // default root must be invalid
     m_tree.setRootContent(QVariant(0x51201382));
     QVERIFY(qvariant_equals<typeof(0x51201382)>(m_tree.rootContent(), QVariant(0x51201382)));
     QVERIFY(qvariant_equals<typeof(0x51201382)>(m_tree.nodeValue(), QVariant(0x51201382)));
@@ -147,3 +146,51 @@ void TreeGSD::test05SetContainerList()
     QVERIFY(isValid);
 }
 
+
+void TreeGSD::test06DelWithoutContainer()
+{
+    bool isValid = false;
+
+    m_tree.setRootContent(QVariant("\u1237\u4001")); // rubbish
+    QVERIFY(m_tree.isValid());
+    m_tree.delTreeValue(m_tree.rootContent(), QVariantList(), &isValid);
+    QVERIFY(isValid);
+    QVERIFY(m_tree.isValid() == false);
+}
+
+
+void TreeGSD::test07DelContainerList()
+{
+    QVariantList list;
+    list.append(QVariant(0x812451));
+    list.append(QVariant(QVariantList()
+                         << QVariant(QLatin1String("inner"))
+                         << QVariant(false)));
+    m_tree.setRootContent(list);
+
+    QVERIFY(m_tree.isValid());
+    QVERIFY(m_tree.rootContent().type() == QVariant::List);
+    QVERIFY(m_tree.nodeType() == QVariant::List);
+    QVERIFY(m_tree.nodeIsContainer());
+    QVERIFY(m_tree.address().isEmpty());
+
+    bool isValid = false;
+    QVariantList addr;
+    addr << QVariant(1) << QVariant(0);
+    QVERIFY(m_tree.getTreeValue(m_tree.rootContent(), addr, &isValid) == QVariant(QLatin1String("inner")));
+    QVERIFY(isValid);
+    m_tree.delTreeValue(m_tree.rootContent(), addr, &isValid);
+    QVERIFY(isValid);
+    QVERIFY(m_tree.getTreeValue(m_tree.rootContent(), addr, &isValid) == QVariant(false));
+    QVERIFY(isValid);
+
+    addr.clear();
+    addr << QVariant(0);
+    QVERIFY(m_tree.getTreeValue(m_tree.rootContent(), addr, &isValid) == QVariant(0x812451));
+    QVERIFY(isValid);
+    m_tree.delTreeValue(m_tree.rootContent(), addr, &isValid);
+    QVERIFY(isValid);
+    addr << QVariant(0);
+    QVERIFY(m_tree.getTreeValue(m_tree.rootContent(), addr, &isValid) == QVariant(false));
+    QVERIFY(isValid);
+}

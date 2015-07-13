@@ -215,7 +215,7 @@ QVariant QVariantTree::internalDelTreeValue(const QVariant& root,
     bool trueValid = true;
 
     if (address.isEmpty())
-        trueValid = false;
+        result.clear(); // if no address -> invalid
     else if (address.count() == 1) {
         QVariantTreeElementContainer* containerType = containerOf(result.type());
         if (containerType == NULL)
