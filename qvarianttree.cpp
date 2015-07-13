@@ -50,11 +50,11 @@ void QVariantTree::moveToRoot()
 
 //------------------------------------------------------------------------------
 
-bool QVariantTree::typeIsList(QVariant::Type type)
+bool QVariantTree::typeIsList(uint type)
 {
     return (type == QVariant::List);
 }
-bool QVariantTree::typeIsCollection(QVariant::Type type)
+bool QVariantTree::typeIsCollection(uint type)
 {
     return (type == QVariant::Map ||
             type == QVariant::Hash);

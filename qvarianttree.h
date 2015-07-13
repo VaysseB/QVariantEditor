@@ -24,12 +24,12 @@ public:
     bool nodeIsRoot() const { return _address.isEmpty(); }
     void moveToRoot();
 
-    QVariant::Type nodeType() const { return _nodeType; }
+    uint nodeType() const { return _nodeType; }
     QVariant nodeValue() const { return getTreeValue(_root, _address); }
     void setNodeValue(QVariant value);
 
-    static bool typeIsList(QVariant::Type type);
-    static bool typeIsCollection(QVariant::Type type);
+    static bool typeIsList(uint type);
+    static bool typeIsCollection(uint type);
 
     bool nodeIsList() const;
     int  itemListSize() const;
@@ -70,7 +70,7 @@ private:
 private:
     QVariant _root;
     QVariantList _address;
-    QVariant::Type _nodeType;
+    uint _nodeType;
 };
 
 #endif // QVARIANTTREE_H

@@ -326,7 +326,7 @@ void QTableVariantTree::deleteValue()
 
 //------------------------------------------------------------------------------
 
-QVariant QTableVariantTree::createValue(QVariant::Type type) const
+QVariant QTableVariantTree::createValue(uint type) const
 {
     QVariant result;
 

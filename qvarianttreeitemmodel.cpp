@@ -323,7 +323,7 @@ Qt::ItemFlags QVariantTreeItemModel::flags(const QModelIndex & index) const
         // if cell is list/collection -> cannot edit
         if (_content.type() == QVariant::List)
         {
-            QVariant::Type itemType = _content.toList().value(index.row()).type();
+            uint itemType = _content.toList().value(index.row()).type();
             canEdit = (itemType != QVariant::List) &&
                     (itemType != QVariant::Map) &&
                     (itemType != QVariant::Hash);
@@ -339,7 +339,7 @@ Qt::ItemFlags QVariantTreeItemModel::flags(const QModelIndex & index) const
 
 //------------------------------------------------------------------------------
 
-QString QVariantTreeItemModel::typeToString(const QVariant::Type& type) const
+QString QVariantTreeItemModel::typeToString(const uint& type) const
 {
     return _typesName.value(type, tr("<unknown>"));
 }

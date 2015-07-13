@@ -138,7 +138,7 @@ public:
      * @param type The type to display
      * @return Type's string representation
      */
-    QString typeToString(const QVariant::Type& type) const;
+    QString typeToString(const uint& type) const;
     /**
      * @brief Format to display the given key.
      * @param key The key to display
@@ -164,13 +164,13 @@ public:
      * Each type is paired with its own string name.
      * @return Hash of type and names
      */
-    QHash<QVariant::Type, QString> typesToName() const { return _typesName; }
+    QHash<uint, QString> typesToName() const { return _typesName; }
     /**
      * @brief Check if the type is handle by the model
      * @param type The type to check for
      * @return True if handled
      */
-    bool typeIsHandled(QVariant::Type type) const { return _typesName.contains(type); }
+    bool typeIsHandled(uint type) const { return _typesName.contains(type); }
 
     /**
      * @brief Hack to reset internal model content with current tree node content.
@@ -189,8 +189,8 @@ signals:
     void valueKeyChanged(const QVariant& key,
                          const QVariant& oldKey);
     void valueContentChanged(const QVariant &key);
-    void valueTypeChanged(const QVariant::Type& type,
-                          const QVariant::Type& oldType);
+    void valueTypeChanged(const uint& type,
+                          const uint& oldType);
 
     void insertedValue(const QVariant& key);
     void deletedValue(const QVariant& key);
@@ -210,7 +210,7 @@ private:
     QVariant _content;
     bool _isEmpty;
 
-    QHash<QVariant::Type, QString> _typesName;
+    QHash<uint, QString> _typesName;
 
 };
 

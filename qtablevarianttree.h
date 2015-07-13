@@ -43,7 +43,7 @@ protected slots:
 protected:
     void resizeEvent(QResizeEvent *event);
 
-    virtual QVariant createValue(QVariant::Type type) const;
+    virtual QVariant createValue(uint type) const;
 
 private:
     QVariantTreeItemModel _model;

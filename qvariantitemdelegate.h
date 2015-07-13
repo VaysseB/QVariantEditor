@@ -26,7 +26,7 @@ public:
                       const QModelIndex &index) const;
 
     virtual QVariant convertValue(QVariant value,
-                                  QVariant::Type returnType,
+                                  uint returnType,
                                   bool* ok = NULL) const;
 
 private:

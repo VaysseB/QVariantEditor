@@ -76,8 +76,8 @@ QWidget* QVariantItemDelegate::createEditor(QWidget *parent,
     // si colonne type -> edition possible
     else if (index.column() == model->columnType())
     {
-        QVariant::Type item = model->rawData(index.row(), model->columnType()).type();
-        if (model->typeIsHandled(item))
+        uint itemType = model->rawData(index.row(), model->columnType()).type();
+        if (model->typeIsHandled(itemType))
             editor = new QComboBox;
     }
 
@@ -176,7 +176,7 @@ void QVariantItemDelegate::setEditorData(QWidget *editor,
     // si colonne type -> edition possible
     else if (index.column() == model->columnType())
     {
-        QVariant::Type itemType = model->rawData(index).type();
+        uint itemType = model->rawData(index).type();
         QComboBox* combo = qobject_cast<QComboBox*>(editor);
 
         // if value is list
@@ -202,14 +202,14 @@ void QVariantItemDelegate::setEditorData(QWidget *editor,
         }
         // else, it is something...
         else {
-            QHash<QVariant::Type, QString> names = model->typesToName();
+            QHash<uint, QString> names = model->typesToName();
             names.remove(QVariant::Invalid);
             // purging list/collection if type valid
             names.remove(QVariant::List);
             names.remove(QVariant::Map);
             names.remove(QVariant::Hash);
 
-            QHash<QVariant::Type, QString>::const_iterator it = names.constBegin();
+            QHash<uint, QString>::const_iterator it = names.constBegin();
             for (; it != names.constEnd(); ++it) {
                 combo->addItem(it.value(), it.key());
                 if (it.key() == itemType)
@@ -407,7 +407,7 @@ void QVariantItemDelegate::setModelData(QWidget *editor,
             return;
 
         QVariantList itemInfos = model->rawDatas(index.row());
-        QVariant::Type newItemType = combo->currentData().type();
+        uint newItemType = combo->currentData().type();
 
         QVariant key = itemInfos.value(model->columnKey());
         QVariant value = itemInfos.value(model->columnValue());
@@ -444,7 +444,7 @@ QVariantTreeItemModel* QVariantItemDelegate::extractModel(const QModelIndex& ind
 //------------------------------------------------------------------------------
 
 QVariant QVariantItemDelegate::convertValue(QVariant value,
-                                            QVariant::Type returnType,
+                                            uint returnType,
                                             bool* ok) const
 {
     if (returnType == value.type()) {
