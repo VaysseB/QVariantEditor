@@ -131,7 +131,7 @@ void QVariantTree::delItemContainer(const QVariant& key)
 }
 
 //------------------------------------------------------------------------------
-
+#include <QDebug>
 QVariant QVariantTree::getTreeValue(const QVariant& root,
                                     const QVariantList& address,
                                     bool* isValid) const
@@ -141,21 +141,21 @@ QVariant QVariantTree::getTreeValue(const QVariant& root,
     bool trueValid = true;
 
     while (trueValid && indexAddress < address.count()) {
-        if (typeIsContainer(result.type())) {
-            QVariantTreeElementContainer* containerType = containerOf(result.type());
-            if (containerType)
-                result = containerType->item(result, address.value(indexAddress++));
-            else
-                trueValid &= false;
-        }
-        else {
-            trueValid &= (indexAddress >= address.count());
-            break;
-        }
+        QVariantTreeElementContainer* containerType = NULL;
+        QVariant key = address.value(indexAddress++);
+
+        trueValid = typeIsContainer(result.type())
+                && (containerType = containerOf(result.type()))
+                && containerType->keys(result).contains(key);
+
+        if (trueValid)
+            result = containerType->item(result, key);
     }
 
     if (isValid)
         *isValid = trueValid;
+    if (trueValid == false)
+        result.clear();
 
     return result;
 }
@@ -172,13 +172,13 @@ QVariant QVariantTree::setTreeValue(const QVariant& root,
         result = value;
     else {
         QVariantTreeElementContainer* containerType = containerOf(result.type());
-        if (containerType == 0)
-            trueValid = false;
-        else {
+        if (containerType && containerType->keys(result).contains(address.first())) {
             result = containerType->item(result, address.first());
             result = setTreeValue(result, address.mid(1), value);
             result = containerType->setItem(root, address.first(), result);
         }
+        else
+            trueValid = false;
     }
 
     if (isValid)
@@ -205,13 +205,13 @@ QVariant QVariantTree::delTreeValue(const QVariant& root,
     }
     else {
         QVariantTreeElementContainer* containerType = containerOf(result.type());
-        if (containerType == 0)
-            trueValid = false;
-        else {
+        if (containerType && containerType->keys(result).contains(address.first())) {
             result = containerType->item(result, address.first());
             result = delTreeValue(result, address.mid(1));
             result = containerType->setItem(root, address.first(), result);
         }
+        else
+            trueValid = false;
     }
 
     if (isValid)
