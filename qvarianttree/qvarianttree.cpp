@@ -9,11 +9,19 @@ QVariantTree::QVariantTree() :
     m_containers()
 {
     setContainer(QVariant::List, new QVariantTreeListContainer);
+    setContainer(QVariant::StringList, new QVariantTreeListContainer);
     setContainer(QVariant::Hash, new QVariantTreeHashContainer);
     setContainer(QVariant::Map, new QVariantTreeMapContainer);
 
     clear();
 }
+
+QVariantTree::~QVariantTree()
+{
+    qDeleteAll(m_containers);
+    m_containers.clear();
+}
+
 
 void QVariantTree::clear()
 {

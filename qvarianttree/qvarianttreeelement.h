@@ -7,6 +7,8 @@
 class QVariantTreeElementContainer
 {
 public:
+    virtual ~QVariantTreeElementContainer() {}
+
     virtual QVariantList keys(const QVariant& content) const = 0;
     virtual QVariant item(const QVariant& content, const QVariant& key, const QVariant& defaultValue = QVariant()) const = 0;
     virtual QVariant setItem(const QVariant& content, const QVariant& key, const QVariant& value) const = 0;

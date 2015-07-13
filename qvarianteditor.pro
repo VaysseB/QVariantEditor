@@ -1,6 +1,7 @@
 TEMPLATE = subdirs
 
 SUBDIRS += \
-    qvarianttree
+    qvarianttree \
+    tests
 
 CONFIG += ordered

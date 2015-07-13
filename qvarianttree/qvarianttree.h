@@ -49,8 +49,9 @@ public:
     void setFromFile(QString filename) { setRootContent(QVariantTree::fromFile(filename)); }
     void setFromFile(QIODevice *file) { setRootContent(QVariantTree::fromFile(file)); }
 
-    QVariantTreeElementContainer* setContainer(uint type,
-                                               QVariantTreeElementContainer* container);
+    QVariantTreeElementContainer* setContainer(
+            uint type,
+            QVariantTreeElementContainer* container);
 
     QVariant getTreeValue(const QVariant& root,
                           const QVariantList& address,
