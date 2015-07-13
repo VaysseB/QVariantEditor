@@ -1,15 +1,16 @@
 #ifndef QVARIANTTREE_H
 #define QVARIANTTREE_H
 
-#include <QDebug>
 #include <QVariant>
-#include <QStringList>
+
+#include "qvarianttreeelement.h"
 
 
 class QVariantTree
 {
 public:
-    QVariantTree();
+    explicit QVariantTree();
+    virtual ~QVariantTree();
 
     void clear();
 
@@ -28,21 +29,13 @@ public:
     QVariant nodeValue() const { return getTreeValue(_root, _address); }
     void setNodeValue(QVariant value);
 
-    static bool typeIsList(uint type);
-    static bool typeIsCollection(uint type);
+    bool typeIsContainer(uint type) const;
 
-    bool nodeIsList() const;
-    int  itemListSize() const;
-    QVariant getItemList(int index /* -1 => last */) const;
-    void setItemList(int index /* -1 => last */, QVariant value);
-    void insertItemList(int index /* -1 => append */, QVariant value);
-    void delItemList(int index /* -1 => last */);
-
-    bool nodeIsCollection() const;
-    QStringList itemCollectionKeys() const;
-    QVariant getItemCollection(QString key, QVariant defaultValue = QVariant()) const;
-    void setItemCollection(QString key, QVariant value);
-    void delItemCollection(QString key);
+    bool nodeIsContainer() const;
+    QVariantList itemContainerKeys() const;
+    QVariant getItemContainer(const QVariant& key, const QVariant& defaultValue = QVariant()) const;
+    void setItemContainer(const QVariant& key, const QVariant& value);
+    void delItemContainer(const QVariant& key);
 
     bool isValid() const { return _root.isValid(); }
 
@@ -56,21 +49,29 @@ public:
     void setFromFile(QString filename) { setRootContent(QVariantTree::fromFile(filename)); }
     void setFromFile(QIODevice *file) { setRootContent(QVariantTree::fromFile(file)); }
 
+    QVariantTreeElementContainer* setContainer(uint type,
+                                               QVariantTreeElementContainer* container);
+
+    QVariant getTreeValue(const QVariant& root,
+                          const QVariantList& address,
+                          bool* isValid = 0) const;
+    QVariant setTreeValue(const QVariant& root,
+                          const QVariantList& address,
+                          const QVariant& value,
+                          bool* isValid = 0) const;
+    QVariant delTreeValue(const QVariant& root,
+                          const QVariantList& address,
+                          bool* isValid = 0) const;
+
 private:
-    static QVariant getTreeValue(const QVariant &root,
-                                 QVariantList address);
-
-    static QVariant setTreeValue(QVariant &root,
-                                 QVariantList address,
-                                 QVariant& value);
-
-    static QVariant delTreeValue(QVariant &root,
-                                 QVariantList address);
+    QVariantTreeElementContainer* containerOf(uint type) const;
 
 private:
     QVariant _root;
     QVariantList _address;
     uint _nodeType;
+
+    QMap<uint, QVariantTreeElementContainer*> m_containers;
 };
 
 #endif // QVARIANTTREE_H

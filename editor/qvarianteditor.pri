@@ -17,14 +17,16 @@ SOURCES += main.cpp\
     qvarianttree.cpp \
     qvarianttreeitemmodel.cpp \
     qvariantitemdelegate.cpp \
-    qtablevarianttree.cpp
+    qtablevarianttree.cpp \
+    qvarianttreeelement.cpp
 
 HEADERS  += mainwindow.h \
     qvarianttree.h \
     qvarianttreeitemmodel.h \
     qvariantitemdelegate.h \
     qtablevarianttree.h \
-    project.h
+    project.h \
+    qvarianttreeelement.h
 
 FORMS    += mainwindow.ui
 
