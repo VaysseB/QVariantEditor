@@ -50,6 +50,11 @@ void QVariantTree::setRootContent(QVariant rootContent)
     _nodeType = _root.type();
 }
 
+void QVariantTree::setNodeValue(QVariant value)
+{
+    _root = internalSetTreeValue(_root, _address, value);
+}
+
 //------------------------------------------------------------------------------
 
 void QVariantTree::moveToNode(const QVariant& key)
@@ -116,7 +121,7 @@ void QVariantTree::setItemContainer(const QVariant& key, const QVariant& value)
 
     QVariantList collItemAddress = _address;
     collItemAddress << QVariant(key);
-    _root = setTreeValue(_root, collItemAddress, value);
+    _root = internalSetTreeValue(_root, collItemAddress, value);
 }
 
 void QVariantTree::delItemContainer(const QVariant& key)
@@ -127,11 +132,11 @@ void QVariantTree::delItemContainer(const QVariant& key)
 
     QVariantList collItemAddress = _address;
     collItemAddress << QVariant(key);
-    _root = delTreeValue(_root, collItemAddress);
+    _root = internalDelTreeValue(_root, collItemAddress);
 }
 
 //------------------------------------------------------------------------------
-#include <QDebug>
+
 QVariant QVariantTree::getTreeValue(const QVariant& root,
                                     const QVariantList& address,
                                     bool* isValid) const
@@ -160,7 +165,22 @@ QVariant QVariantTree::getTreeValue(const QVariant& root,
     return result;
 }
 
-QVariant QVariantTree::setTreeValue(const QVariant& root,
+void QVariantTree::setTreeValue(const QVariant& root,
+                                    const QVariantList& address,
+                                    const QVariant& value,
+                                    bool* isValid)
+{
+    _root = internalSetTreeValue(root, address, value, isValid);
+}
+
+void QVariantTree::delTreeValue(const QVariant& root,
+                                    const QVariantList& address,
+                                    bool* isValid)
+{
+    _root = internalDelTreeValue(root, address, isValid);
+}
+
+QVariant QVariantTree::internalSetTreeValue(const QVariant& root,
                                     const QVariantList& address,
                                     const QVariant& value,
                                     bool* isValid) const
@@ -174,7 +194,7 @@ QVariant QVariantTree::setTreeValue(const QVariant& root,
         QVariantTreeElementContainer* containerType = containerOf(result.type());
         if (containerType && containerType->keys(result).contains(address.first())) {
             result = containerType->item(result, address.first());
-            result = setTreeValue(result, address.mid(1), value);
+            result = internalSetTreeValue(result, address.mid(1), value);
             result = containerType->setItem(root, address.first(), result);
         }
         else
@@ -187,7 +207,7 @@ QVariant QVariantTree::setTreeValue(const QVariant& root,
     return result;
 }
 
-QVariant QVariantTree::delTreeValue(const QVariant& root,
+QVariant QVariantTree::internalDelTreeValue(const QVariant& root,
                                     const QVariantList& address,
                                     bool* isValid) const
 {
@@ -207,7 +227,7 @@ QVariant QVariantTree::delTreeValue(const QVariant& root,
         QVariantTreeElementContainer* containerType = containerOf(result.type());
         if (containerType && containerType->keys(result).contains(address.first())) {
             result = containerType->item(result, address.first());
-            result = delTreeValue(result, address.mid(1));
+            result = internalDelTreeValue(result, address.mid(1));
             result = containerType->setItem(root, address.first(), result);
         }
         else

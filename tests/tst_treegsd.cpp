@@ -96,3 +96,54 @@ void TreeGSD::test03GetContainerList()
     QVERIFY(isValid == false);
 }
 
+
+void TreeGSD::test04SetWithoutContainer()
+{
+    // default root must be invalid
+    m_tree.setRootContent(QVariant(0x51201382));
+    QVERIFY(qvariant_equals<typeof(0x51201382)>(m_tree.rootContent(), QVariant(0x51201382)));
+    QVERIFY(qvariant_equals<typeof(0x51201382)>(m_tree.nodeValue(), QVariant(0x51201382)));
+
+    m_tree.clear();
+    m_tree.setNodeValue(QVariant(0x51201382));
+    QVERIFY(qvariant_equals<typeof(0x51201382)>(m_tree.rootContent(), QVariant(0x51201382)));
+    QVERIFY(qvariant_equals<typeof(0x51201382)>(m_tree.nodeValue(), QVariant(0x51201382)));
+}
+
+
+void TreeGSD::test05SetContainerList()
+{
+    QVariantList list;
+    list.append(QVariant(QLatin1String("first")));
+    list.append(QVariant(QLatin1String("second")));
+    list.append(QVariant((qlonglong)3l));
+    list.append(QVariant(list));
+    m_tree.setRootContent(list);
+
+    QVERIFY(m_tree.isValid());
+    QVERIFY(m_tree.rootContent().type() == QVariant::List);
+    QVERIFY(m_tree.nodeType() == QVariant::List);
+    QVERIFY(m_tree.nodeIsContainer());
+    QVERIFY(m_tree.address().isEmpty());
+
+    bool isValid = false;
+    QVariantList addr;
+    addr << QVariant(2);
+    QVERIFY(m_tree.getTreeValue(m_tree.rootContent(), addr, &isValid) == QVariant((qlonglong)3l));
+    QVERIFY(isValid);
+    m_tree.setTreeValue(m_tree.rootContent(), addr, QVariant(QLatin1String("tree")), &isValid);
+    QVERIFY(isValid);
+    QVERIFY(m_tree.getTreeValue(m_tree.rootContent(), addr, &isValid) == QVariant(QLatin1String("tree")));
+    QVERIFY(isValid);
+
+    isValid = false;
+    addr.clear();
+    addr << QVariant(3) << QVariant(0);
+    QVERIFY(m_tree.getTreeValue(m_tree.rootContent(), addr, &isValid) == QVariant(QLatin1String("first")));
+    QVERIFY(isValid);
+    m_tree.setTreeValue(m_tree.rootContent(), addr, QVariant(-9), &isValid);
+    QVERIFY(isValid);
+    QVERIFY(m_tree.getTreeValue(m_tree.rootContent(), addr, &isValid) == QVariant(-9));
+    QVERIFY(isValid);
+}
+

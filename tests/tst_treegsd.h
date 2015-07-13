@@ -26,6 +26,8 @@ private Q_SLOTS:
     void test01Types();
     void test02GetWithoutContainer();
     void test03GetContainerList();
+    void test04SetWithoutContainer();
+    void test05SetContainerList();
 
 private:
     template <typename T>

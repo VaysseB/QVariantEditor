@@ -56,16 +56,24 @@ public:
     QVariant getTreeValue(const QVariant& root,
                           const QVariantList& address,
                           bool* isValid = 0) const;
-    QVariant setTreeValue(const QVariant& root,
-                          const QVariantList& address,
-                          const QVariant& value,
-                          bool* isValid = 0) const;
-    QVariant delTreeValue(const QVariant& root,
-                          const QVariantList& address,
-                          bool* isValid = 0) const;
+    void setTreeValue(const QVariant& root,
+                      const QVariantList& address,
+                      const QVariant& value,
+                      bool* isValid = 0);
+    void delTreeValue(const QVariant& root,
+                      const QVariantList& address,
+                      bool* isValid = 0);
 
 private:
     QVariantTreeElementContainer* containerOf(uint type) const;
+
+    QVariant internalSetTreeValue(const QVariant& root,
+                                  const QVariantList& address,
+                                  const QVariant& value,
+                                  bool* isValid = 0) const;
+    QVariant internalDelTreeValue(const QVariant& root,
+                                  const QVariantList& address,
+                                  bool* isValid = 0) const;
 
 private:
     QVariant _root;
