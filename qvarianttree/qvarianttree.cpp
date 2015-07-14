@@ -100,7 +100,7 @@ QVariantList QVariantTree::itemContainerKeys() const
 {
     Q_ASSERT(nodeIsContainer());
     QVariantTreeElementContainer* containerType = containerOf(nodeType());
-    Q_ASSERT_X(containerType != 0, "QVariantTree", "cannot find container of type");
+    Q_ASSERT_X(containerType != 0, "QVariantTree", "cannot find container of node's type");
     return containerType->keys(nodeValue());
 }
 
@@ -109,7 +109,7 @@ QVariant QVariantTree::getItemContainer(const QVariant& key,
 {
     Q_ASSERT(nodeIsContainer());
     QVariantTreeElementContainer* containerType = containerOf(nodeType());
-    Q_ASSERT_X(containerType != 0, "QVariantTree", "cannot find container of type");
+    Q_ASSERT_X(containerType != 0, "QVariantTree", "cannot find container of node's type");
     return containerType->item(nodeValue(), key, defaultValue);
 }
 
@@ -117,7 +117,7 @@ void QVariantTree::setItemContainer(const QVariant& key, const QVariant& value)
 {
     Q_ASSERT(nodeIsContainer());
     QVariantTreeElementContainer* containerType = containerOf(nodeType());
-    Q_ASSERT_X(containerType != 0, "QVariantTree", "cannot find container of type");
+    Q_ASSERT_X(containerType != 0, "QVariantTree", "cannot find container of node's type");
 
     QVariantList collItemAddress = _address;
     collItemAddress << QVariant(key);
@@ -128,7 +128,7 @@ void QVariantTree::delItemContainer(const QVariant& key)
 {
     Q_ASSERT(nodeIsContainer());
     QVariantTreeElementContainer* containerType = containerOf(nodeType());
-    Q_ASSERT_X(containerType != 0, "QVariantTree", "cannot find container of type");
+    Q_ASSERT_X(containerType != 0, "QVariantTree", "cannot find container of node's type");
 
     QVariantList collItemAddress = _address;
     collItemAddress << QVariant(key);
@@ -215,7 +215,7 @@ QVariant QVariantTree::internalDelTreeValue(const QVariant& root,
     bool trueValid = true;
 
     if (address.isEmpty())
-        result.clear(); // if no address -> invalid
+        result.clear(); // if no address (should not happend, unless if root ins't a container) -> invalid
     else if (address.count() == 1) {
         QVariantTreeElementContainer* containerType = containerOf(result.type());
         if (containerType == NULL)

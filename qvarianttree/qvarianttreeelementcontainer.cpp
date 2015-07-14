@@ -1,4 +1,4 @@
-#include "qvarianttreeelement.h"
+#include "qvarianttreeelementcontainer.h"
 
 
 QVariantList QVariantTreeElementContainer::fromSize(const int size)

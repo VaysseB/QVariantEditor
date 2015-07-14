@@ -7,8 +7,8 @@ CONFIG += static
 
 SOURCES += \
     qvarianttree.cpp \
-    qvarianttreeelement.cpp
+    qvarianttreeelementcontainer.cpp
 
 HEADERS  += \
     qvarianttree.h \
-    qvarianttreeelement.h
+    qvarianttreeelementcontainer.h

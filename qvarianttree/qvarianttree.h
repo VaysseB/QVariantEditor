@@ -3,7 +3,7 @@
 
 #include <QVariant>
 
-#include "qvarianttreeelement.h"
+#include "qvarianttreeelementcontainer.h"
 
 
 class QVariantTree
