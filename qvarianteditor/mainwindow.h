@@ -36,6 +36,7 @@ private slots:
 
     void updateWithTab(int index);
     void tabNameChanged();
+    void tabModified();
 
 private:
     Ui::mainwindow *ui;

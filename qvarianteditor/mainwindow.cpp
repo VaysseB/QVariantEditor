@@ -90,10 +90,12 @@ void MainWindow::new_()
     connect(tvw, SIGNAL(windowTitleChanged(QString)),
             this, SLOT(tabNameChanged()));
     connect(tvw, SIGNAL(widgetModified(bool)),
+            this, SLOT(tabModified()));
+    connect(tvw, SIGNAL(widgetModified(bool)),
             this, SLOT(setWindowModified(bool)));
 
-    ui->tabWidget->addTab(tvw, tvw->windowTitle());
-    ui->tabWidget->setCurrentIndex(ui->tabWidget->count());
+    int index = ui->tabWidget->addTab(tvw, tvw->windowTitle());
+    ui->tabWidget->setCurrentIndex(index);
 }
 
 void MainWindow::open()
@@ -126,10 +128,12 @@ void MainWindow::open()
         connect(tvw, SIGNAL(windowTitleChanged(QString)),
                 this, SLOT(tabNameChanged()));
         connect(tvw, SIGNAL(widgetModified(bool)),
+                this, SLOT(tabModified()));
+        connect(tvw, SIGNAL(widgetModified(bool)),
                 this, SLOT(setWindowModified(bool)));
 
-        ui->tabWidget->addTab(tvw, tvw->windowTitle());
-        ui->tabWidget->setCurrentIndex(ui->tabWidget->indexOf(tvw));
+        int index = ui->tabWidget->addTab(tvw, tvw->windowTitle());
+        ui->tabWidget->setCurrentIndex(index);
     }
 
 }
@@ -206,8 +210,10 @@ void MainWindow::updateWithTab(int index)
                     ui->tabWidget->widget(index));
         Q_ASSERT(tvw);
 
-        ui->tabWidget->setTabText(index, tvw->windowTitle());
-        ui->tabWidget->setTabIcon(index, tvw->windowIcon());
+        QString tabName = tvw->windowTitle();
+        if (tvw->isWindowModified())
+            tabName.prepend(QString("*"));
+        ui->tabWidget->setTabText(index, tabName);
 
         setWindowTitle(tvw->windowTitle() + QString("[*]"));
         setWindowModified(tvw->isWindowModified());
@@ -221,4 +227,9 @@ void MainWindow::tabNameChanged()
 
     int index = ui->tabWidget->indexOf(tvw);
     updateWithTab(index);
+}
+
+void MainWindow::tabModified()
+{
+    tabNameChanged();
 }
