@@ -114,8 +114,14 @@ void MainWindow::open()
     if (!openFilename.isEmpty()) {
         tvw = new QTreeVariantWidget;
 
+        QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+        statusBar()->showMessage(tr("Loading %1").arg(openFilename));
+
         tvw->setFilename(openFilename);
         tvw->read();
+
+        QApplication::restoreOverrideCursor();
+        statusBar()->showMessage(tr("File loaded %1").arg(openFilename), 2500);
 
         connect(tvw, SIGNAL(windowTitleChanged(QString)),
                 this, SLOT(tabNameChanged()));
@@ -151,8 +157,14 @@ void MainWindow::save(bool forceAsk)
     }
 
     if (!saveFilename.isEmpty()) {
+        QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+        statusBar()->showMessage(tr("Saving %1").arg(saveFilename));
+
         tvw->setFilename(saveFilename);
         tvw->write();
+
+        QApplication::restoreOverrideCursor();
+        statusBar()->showMessage(tr("File saved %1").arg(saveFilename), 2500);
     }
 }
 
