@@ -89,9 +89,6 @@
    <property name="text">
     <string>New</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+S</string>
-   </property>
   </action>
   <action name="actionOpen">
    <property name="icon">

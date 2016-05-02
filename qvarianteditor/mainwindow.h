@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+class QTreeVariantWidget;
+
 
 namespace Ui {
 class mainwindow;
@@ -32,8 +34,8 @@ private slots:
     void quit();
     void about();
 
-private:
-    void saveAll();
+    void updateWithTab(int index);
+    void tabNameChanged();
 
 private:
     Ui::mainwindow *ui;

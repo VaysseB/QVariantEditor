@@ -7,6 +7,10 @@
 #include <QMessageBox>
 #include <QStandardPaths>
 
+#include <QDebug>
+
+#include "qtreevariantwidget.h"
+
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -29,29 +33,15 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(quit()));
     connect(ui->actionAbout, SIGNAL(triggered()),
             this, SLOT(about()));
+
+    connect(ui->tabWidget, SIGNAL(currentChanged(int)),
+            this, SLOT(updateWithTab(int)));
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
-
-//------------------------------------------------------------------------------
-
-QMessageBox::StandardButton askToSave(QWidget* parent)
-{
-    QMessageBox::StandardButton resp = QMessageBox::NoButton;
-    if (parent->isWindowModified()) {
-        resp = QMessageBox::question(
-                    parent,
-                    MainWindow::tr("Save datas"),
-                    MainWindow::tr("Do you wish to save ?"),
-                    QMessageBox::Save | QMessageBox::Cancel | QMessageBox::No,
-                    QMessageBox::Cancel);
-    }
-    return resp;
-}
-
 //------------------------------------------------------------------------------
 
 void MainWindow::about()
@@ -72,91 +62,151 @@ void MainWindow::about()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    switch (askToSave(this))
-    {
-    case QMessageBox::Cancel:
-        event->ignore();
-        break;
-    case QMessageBox::Save:
-        saveAll();
-    default:
-        break;
+    bool tabModifiedCount = 0;
+    for (int i = 0; i < ui->tabWidget->count(); i++) {
+        tabModifiedCount += (ui->tabWidget->widget(i)->isWindowModified())
+                ? 1 : 0;
     }
+
+    QMessageBox::StandardButton resp = QMessageBox::Yes;
+
+    if (tabModifiedCount > 0) {
+        resp = QMessageBox::question(
+                    this,
+                    tr("Exit"),
+                    tr("Some file are not saved, quit anyway ?"),
+                    QMessageBox::Yes | QMessageBox::Cancel | QMessageBox::No,
+                    QMessageBox::No);
+    }
+
+    if (resp != QMessageBox::Yes)
+        event->ignore();
 }
 
 void MainWindow::new_()
 {
-    switch (askToSave(this))
-    {
-    case QMessageBox::Cancel:
-        return;
-    case QMessageBox::Save:
-        saveAll();
-    default:
-        break;
-    }
+    QTreeVariantWidget* tvw = new QTreeVariantWidget;
 
-    setWindowTitle(QString("%1 - QVariantEditor").arg(tr("untitled")));
-    setWindowModified(false);
+    connect(tvw, SIGNAL(windowTitleChanged(QString)),
+            this, SLOT(tabNameChanged()));
+    connect(tvw, SIGNAL(widgetModified(bool)),
+            this, SLOT(setWindowModified(bool)));
+
+    ui->tabWidget->addTab(tvw, tvw->windowTitle());
+    ui->tabWidget->setCurrentIndex(ui->tabWidget->count());
 }
 
 void MainWindow::open()
 {
-    switch (askToSave(this))
-    {
-    case QMessageBox::Cancel:
-        return;
-    case QMessageBox::Save:
-        saveAll();
-    default:
-        break;
+    QTreeVariantWidget* tvw = qobject_cast<QTreeVariantWidget*>(
+            ui->tabWidget->currentWidget());
+
+    QString openFilename = tvw ? tvw->filename() : QString();
+
+    if (openFilename.isEmpty()) {
+        openFilename = QStandardPaths::standardLocations(
+                    QStandardPaths::HomeLocation).value(0);
     }
+
+    openFilename = QFileDialog::getOpenFileName(
+                this, tr("Open file"), openFilename);
+
+    if (!openFilename.isEmpty()) {
+        tvw = new QTreeVariantWidget;
+
+        tvw->setFilename(openFilename);
+        tvw->read();
+
+        connect(tvw, SIGNAL(windowTitleChanged(QString)),
+                this, SLOT(tabNameChanged()));
+        connect(tvw, SIGNAL(widgetModified(bool)),
+                this, SLOT(setWindowModified(bool)));
+
+        ui->tabWidget->addTab(tvw, tvw->windowTitle());
+        ui->tabWidget->setCurrentIndex(ui->tabWidget->indexOf(tvw));
+    }
+
 }
 
 void MainWindow::save(bool forceAsk)
 {
-    QString saveFilename = QStandardPaths::writableLocation(
-                QStandardPaths::HomeLocation);
-    if (saveFilename.isEmpty() || forceAsk) {
-        saveFilename = QFileDialog::getSaveFileName(this, tr("Save file"), saveFilename);
+    if (ui->tabWidget->count() <= 0)
+        return;
+
+    QTreeVariantWidget* tvw = qobject_cast<QTreeVariantWidget*>(
+            ui->tabWidget->currentWidget());
+    Q_ASSERT(tvw);
+    bool tvw_is_new = tvw && tvw->filename().isEmpty();
+
+    QString saveFilename = tvw->filename();
+
+    if (saveFilename.isEmpty()) {
+        saveFilename = QStandardPaths::writableLocation(
+                    QStandardPaths::HomeLocation);
+    }
+
+    if (tvw_is_new || forceAsk) {
+        saveFilename = QFileDialog::getSaveFileName(
+                    this, tr("Save file"), saveFilename);
     }
 
     if (!saveFilename.isEmpty()) {
-        setWindowTitle(QString("%1 - QVariantEditor").arg(QDir(saveFilename).dirName()));
-        setWindowModified(false);
+        tvw->setFilename(saveFilename);
+        tvw->write();
     }
 }
 
 void MainWindow::close()
 {
-    switch (askToSave(this))
-    {
-    case QMessageBox::Cancel:
+    if (ui->tabWidget->count() <= 0)
         return;
-    case QMessageBox::Save:
-        saveAll();
-    default:
-        break;
+
+    QMessageBox::StandardButton resp = QMessageBox::Yes;
+
+    if (isWindowModified()) {
+        resp = QMessageBox::question(
+                    this,
+                    tr("Close"),
+                    tr("Some changes are not saved, close anyway ?"),
+                    QMessageBox::Yes | QMessageBox::Cancel | QMessageBox::No,
+                    QMessageBox::No);
     }
+
+    if (resp == QMessageBox::Yes)
+        ui->tabWidget->removeTab(ui->tabWidget->currentIndex());
 }
 
 void MainWindow::quit()
 {
-    switch (askToSave(this))
-    {
-    case QMessageBox::Cancel:
-        return;
-    case QMessageBox::Save:
-        saveAll();
-    default:
-        break;
-    }
-
-    qApp->quit();
+    QMainWindow::close();
 }
 
 //------------------------------------------------------------------------------
 
-void MainWindow::saveAll()
+void MainWindow::updateWithTab(int index)
 {
+    if (index < 0) {
+        setWindowTitle(QString());
+        setWindowModified(false);
+    }
+    else {
+        QTreeVariantWidget* tvw = qobject_cast<QTreeVariantWidget*>(
+                    ui->tabWidget->widget(index));
+        Q_ASSERT(tvw);
+
+        ui->tabWidget->setTabText(index, tvw->windowTitle());
+        ui->tabWidget->setTabIcon(index, tvw->windowIcon());
+
+        setWindowTitle(tvw->windowTitle() + QString("[*]"));
+        setWindowModified(tvw->isWindowModified());
+    }
+}
+
+void MainWindow::tabNameChanged()
+{
+    QTreeVariantWidget* tvw = qobject_cast<QTreeVariantWidget*>(sender());
+    Q_ASSERT(tvw);
+
+    int index = ui->tabWidget->indexOf(tvw);
+    updateWithTab(index);
 }

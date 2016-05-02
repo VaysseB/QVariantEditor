@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     app.setApplicationName("QVariantEditor");
     app.setApplicationVersion("1.0");
+    app.setApplicationDisplayName(app.applicationName());
 
     // traduction
     QString locale = QLocale::system().name();
