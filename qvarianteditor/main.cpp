@@ -6,14 +6,17 @@
 #include <QTranslator>
 #include <QLibraryInfo>
 
-#include "project.h"
+
+inline QPoint operator +(const QPoint& p, const QSize& s) {
+    return QPoint(p.x() + s.width(), p.y() + s.height());
+}
 
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    app.setApplicationName(PROJECT_NAME);
-    app.setApplicationVersion(STR_VERSION);
+    app.setApplicationName("QVariantEditor");
+    app.setApplicationVersion("1.0");
 
     // traduction
     QString locale = QLocale::system().name();
@@ -40,8 +43,7 @@ int main(int argc, char *argv[])
     const QSize size = w.size();
     const QRect screenRect = QApplication::desktop()->availableGeometry(
                 QApplication::desktop()->primaryScreen());
-    w.move(QPoint(screenRect.left() + (screenRect.width() - size.width()) * 0.5,
-                  screenRect.top() + (screenRect.height() - size.height()) * 0.5));
+    w.move(screenRect.topLeft() + (screenRect.size() - size) * 0.5);
 
     return app.exec();
 }
