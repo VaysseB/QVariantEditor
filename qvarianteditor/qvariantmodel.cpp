@@ -159,7 +159,6 @@ QVariant QVariantModel::headerData(int section, Qt::Orientation orientation, int
 
 QVariant QVariantModel::data(const QModelIndex& index, int role) const
 {
-    qDebug() << Q_FUNC_INFO << index << role;
     if (!index.isValid())
         return QVariant();
 

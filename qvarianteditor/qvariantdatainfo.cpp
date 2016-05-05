@@ -204,17 +204,17 @@ QString QVariantDataInfo::displayText(int depth) const
     case QVariant::List:
         repr = (depth > 0)
                 ? qtprivate::IndexCollection(m_cdata.toList()).displayText(--depth)
-                : QString("[<fold>]");
+                : QString("[...]");
         break;
     case QVariant::Hash:
         repr = (depth > 0)
                 ? qtprivate::AssociativeCollection(m_cdata.toHash()).displayText(--depth)
-                : QString("{<fold>}");
+                : QString("{...}");
         break;
     case QVariant::Map:
         repr = (depth > 0)
                 ? qtprivate::AssociativeCollection(m_cdata.toMap()).displayText(--depth)
-                : QString("{<fold>}");
+                : QString("{...}");
         break;
     default:
         repr = QStringLiteral("<unknow>");

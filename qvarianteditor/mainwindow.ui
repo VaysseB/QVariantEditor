@@ -52,6 +52,8 @@
     <addaction name="actionSaveAs"/>
     <addaction name="actionClose"/>
     <addaction name="separator"/>
+    <addaction name="actionShowOptionSidebar"/>
+    <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -87,6 +89,8 @@
    <addaction name="actionSave"/>
    <addaction name="actionSaveAs"/>
    <addaction name="actionClose"/>
+   <addaction name="separator"/>
+   <addaction name="actionShowOptionSidebar"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
    <property name="sizeGripEnabled">
@@ -184,6 +188,17 @@
    </property>
    <property name="shortcut">
     <string notr="true"/>
+   </property>
+  </action>
+  <action name="actionShowOptionSidebar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset theme="taskbar"/>
+   </property>
+   <property name="text">
+    <string>Show option sidebar</string>
    </property>
   </action>
  </widget>

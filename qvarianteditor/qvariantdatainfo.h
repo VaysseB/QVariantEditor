@@ -53,6 +53,7 @@ struct index_collection_t {
         QList<QVariant> l;
         for (int i = 0; i < c.count(); i++)
             l.append(QVariant(i));
+        std::sort(l.begin(), l.end());
         return l;
     }
 
@@ -77,6 +78,7 @@ struct associative_collection_t {
         QList<QVariant> l;
         for (auto it = c.constBegin(); it != c.constEnd(); ++it)
             l.append(QVariant::fromValue(it.key()));
+        std::sort(l.begin(), l.end());
         return l;
     }
 

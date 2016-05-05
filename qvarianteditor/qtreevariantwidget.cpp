@@ -14,8 +14,6 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 
     ui->treeView->setModel(mp_model.data());
 
-    ui->widgetLocation->hide();
-
     connect(ui->sliderDepth, &QSlider::valueChanged,
             mp_model.data(), &QVariantModel::setDisplayDepth);
 
@@ -82,8 +80,7 @@ void QTreeVariantWidget::write()
     emit widgetModified(isWindowModified());
 }
 
-void QTreeVariantWidget::on_buttonUp_clicked()
+void QTreeVariantWidget::setOptionsVisible(bool visible)
 {
-    setWindowModified(true);
-    emit widgetModified(isWindowModified());
+    ui->widgetOptions->setVisible(visible);
 }

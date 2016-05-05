@@ -31,8 +31,7 @@ public slots:
     void read();
     void write();
 
-private slots:
-    void on_buttonUp_clicked();
+    void setOptionsVisible(bool visible);
 
 private:
     Ui::QTreeVariantWidget *ui;

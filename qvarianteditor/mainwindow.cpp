@@ -96,6 +96,10 @@ void MainWindow::new_()
 
     int index = ui->tabWidget->addTab(tvw, tvw->windowTitle());
     ui->tabWidget->setCurrentIndex(index);
+
+    connect(ui->actionShowOptionSidebar, &QAction::toggled,
+            tvw, &QTreeVariantWidget::setOptionsVisible);
+    tvw->setOptionsVisible(ui->actionShowOptionSidebar->isChecked());
 }
 
 void MainWindow::open()
