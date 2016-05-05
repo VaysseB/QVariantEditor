@@ -1,7 +1,11 @@
 #ifndef QTREEVARIANTWIDGET_H
 #define QTREEVARIANTWIDGET_H
 
+#include <QVariant>
+#include <QSharedPointer>
 #include <QWidget>
+
+#include "qvariantmodel.h"
 
 namespace Ui {
 class QTreeVariantWidget;
@@ -34,6 +38,8 @@ private:
     Ui::QTreeVariantWidget *ui;
 
     QString m_filename;
+
+    QSharedPointer<QVariantModel> mp_model;
 };
 
 #endif // QTREEVARIANTWIDGET_H

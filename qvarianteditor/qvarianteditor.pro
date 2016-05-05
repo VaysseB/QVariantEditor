@@ -4,20 +4,24 @@
 #
 #-------------------------------------------------
 
-QT = core gui
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+QT = core gui widgets
 
 TARGET = QVariantEditor
 TEMPLATE = app
 
+CONFIG += c++11
+
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    qtreevariantwidget.cpp
+    qtreevariantwidget.cpp \
+    qvariantmodel.cpp \
+    qvariantdatainfo.cpp
 
 HEADERS  += mainwindow.h \
-    qtreevariantwidget.h
+    qtreevariantwidget.h \
+    qvariantmodel.h \
+    qvariantdatainfo.h
 
 FORMS    += mainwindow.ui \
     qtreevariantwidget.ui
