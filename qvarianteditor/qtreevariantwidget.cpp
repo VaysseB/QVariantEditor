@@ -16,6 +16,9 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 
     ui->widgetLocation->hide();
 
+    connect(ui->sliderDepth, &QSlider::valueChanged,
+            mp_model.data(), &QVariantModel::setDisplayDepth);
+
     setFilename(QString());
     setWindowModified(true);
     emit widgetModified(isWindowModified());

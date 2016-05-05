@@ -78,6 +78,59 @@
     </widget>
    </item>
    <item>
+    <widget class="QWidget" name="widgetOptions" native="true">
+     <layout class="QFormLayout" name="formLayout">
+      <property name="leftMargin">
+       <number>4</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>4</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="labelDepth">
+        <property name="text">
+         <string>Depth</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QSlider" name="sliderDepth">
+        <property name="toolTip">
+         <string>Depth of recursion when representing list/map/hash.</string>
+        </property>
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>10</number>
+        </property>
+        <property name="pageStep">
+         <number>5</number>
+        </property>
+        <property name="value">
+         <number>1</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="tickPosition">
+         <enum>QSlider::TicksAbove</enum>
+        </property>
+        <property name="tickInterval">
+         <number>1</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QTreeView" name="treeView">
      <property name="editTriggers">
       <set>QAbstractItemView::NoEditTriggers</set>
@@ -104,6 +157,11 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>buttonUp</tabstop>
+  <tabstop>sliderDepth</tabstop>
+  <tabstop>treeView</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

@@ -7,9 +7,9 @@
 
 QVariantModel::QVariantModel(QObject *parent) :
     QAbstractItemModel(parent),
-    mp_root(new node_t)
+    mp_root(new node_t),
+    m_depth(1)
 {
-
 }
 
 QVariantModel::~QVariantModel()
@@ -54,11 +54,22 @@ void QVariantModel::buildTree(
     }
 }
 
+uint QVariantModel::displayDepth() const
+{
+    return m_depth;
+}
+
+void QVariantModel::setDisplayDepth(uint depth)
+{
+    m_depth = depth;
+    // update all the column
+    emit dataChanged(index(0, 1), index(rowCount()-1, 1));
+}
+
 //------------------------------------------------------------------------------
 
 QModelIndex QVariantModel::index(int row, int column, const QModelIndex& parent) const
 {
-    qDebug() << Q_FUNC_INFO << row << column << parent;
     Q_ASSERT(column >= 0 && column < columnCount());
 
     if (!parent.isValid()) {
@@ -76,7 +87,6 @@ QModelIndex QVariantModel::index(int row, int column, const QModelIndex& parent)
 
 QModelIndex QVariantModel::parent(const QModelIndex& child) const
 {
-    qDebug() << Q_FUNC_INFO << child;
     if (child.isValid()) {
         node_t* node = static_cast<node_t*>(child.internalPointer());
         Q_ASSERT(node);
@@ -93,7 +103,6 @@ QModelIndex QVariantModel::parent(const QModelIndex& child) const
 
 bool QVariantModel::hasChildren(const QModelIndex& parent) const
 {
-    qDebug() << Q_FUNC_INFO << parent;
     if (parent.isValid()) {
         node_t* pnode = static_cast<node_t*>(parent.internalPointer());
         Q_ASSERT(pnode);
@@ -104,7 +113,6 @@ bool QVariantModel::hasChildren(const QModelIndex& parent) const
 
 int QVariantModel::rowCount(const QModelIndex& parent) const
 {
-    qDebug() << Q_FUNC_INFO << parent;
     if (parent.isValid()) {
         node_t* pnode = static_cast<node_t*>(parent.internalPointer());
         Q_ASSERT(pnode);
@@ -159,13 +167,12 @@ QVariant QVariantModel::data(const QModelIndex& index, int role) const
     Q_ASSERT(node);
 
     if (role == Qt::DisplayRole) {
-        int depth = 1;
         switch (index.column())
         {
         case 0:
             return QVariantDataInfo(node->keyInParent).displayText();
         case 1:
-            return QVariantDataInfo(node->value).displayText(depth);
+            return QVariantDataInfo(node->value).displayText(m_depth);
         case 2:
             return node->value.typeName();
         default:

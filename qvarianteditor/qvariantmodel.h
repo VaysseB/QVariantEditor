@@ -35,8 +35,14 @@ public:
     QVariant data(const QModelIndex& index, int role) const;
 //    void setData(const QModelIndex& index, const QVariant& value, int role);
 
-    void setRootData(const QVariant& rootData);
     QVariant rootData() const;
+
+    uint displayDepth() const;
+
+public slots:
+    void setRootData(const QVariant& rootData);
+
+    void setDisplayDepth(uint depth);
 
 private:
     void buildTree(node_t& node,
@@ -46,6 +52,7 @@ private:
 
 private:
     QSharedPointer<node_t> mp_root;
+    uint m_depth = 0;
 };
 
 #endif // QVARIANTMODEL_H
