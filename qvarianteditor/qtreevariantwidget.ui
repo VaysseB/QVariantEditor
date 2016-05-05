@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,1">
    <property name="spacing">
     <number>2</number>
    </property>
@@ -98,6 +98,40 @@
     </widget>
    </item>
    <item>
+    <widget class="QWidget" name="widgetSearch" native="true">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QLineEdit" name="lineSearch">
+        <property name="placeholderText">
+         <string>Search in key/index/value/type</string>
+        </property>
+        <property name="clearButtonEnabled">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="comboFilterType"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QTreeView" name="treeView">
      <property name="editTriggers">
       <set>QAbstractItemView::NoEditTriggers</set>
@@ -116,6 +150,9 @@
      </property>
      <property name="horizontalScrollMode">
       <enum>QAbstractItemView::ScrollPerPixel</enum>
+     </property>
+     <property name="animated">
+      <bool>true</bool>
      </property>
      <property name="wordWrap">
       <bool>true</bool>

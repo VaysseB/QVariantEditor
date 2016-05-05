@@ -2,30 +2,55 @@
 #include "ui_qtreevariantwidget.h"
 
 #include <QFileInfo>
-#include <QMenu>
 #include <QDebug>
 
 
 QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::QTreeVariantWidget),
+    mp_sfModel(new QFullFilterProxyModel(this)),
     mp_model(new QVariantModel(this))
 {
     ui->setupUi(this);
 
+    // filter model
+    mp_sfModel->setSourceModel(mp_model.data());
+    mp_sfModel->setFilterRole(Qt::DisplayRole);
+
+    ui->comboFilterType->addItem(tr("Contains"), QFullFilterProxyModel::Contains);
+    ui->comboFilterType->addItem(tr("Wildcard"), QFullFilterProxyModel::WildCard);
+    ui->comboFilterType->addItem(tr("Regex"), QFullFilterProxyModel::Regex);
+    ui->comboFilterType->addItem(tr("Fixed"), QFullFilterProxyModel::Fixed);
+    ui->comboFilterType->setCurrentIndex(0);
+
+    void (QComboBox::* currentIndexChangedPtr)(int) = &QComboBox::currentIndexChanged;
+    connect(ui->comboFilterType, currentIndexChangedPtr,
+            this, &QTreeVariantWidget::searchTypeChanged);
+
     // tree view options
-    ui->treeView->setModel(mp_model.data());
+    ui->treeView->setModel(mp_sfModel.data());
+    ui->treeView->setWordWrap(true);
+    ui->treeView->setAlternatingRowColors(true);
+    ui->treeView->setDragDropOverwriteMode(false);
+    ui->treeView->setProperty("showDropIndicator", QVariant(false));
+    ui->treeView->setUniformRowHeights(false);
 
     // tree view header options
     QHeaderView* header = ui->treeView->header();
+    header->setStretchLastSection(false);
     header->setSectionsMovable(true);
     header->setSectionResizeMode(mp_model->column(QVariantModel::KeyColumn),
                                  QHeaderView::Interactive);
     header->setSectionResizeMode(mp_model->column(QVariantModel::ValueColumn),
-                                 QHeaderView::Interactive);
+                                 QHeaderView::Stretch);
     header->setSectionResizeMode(mp_model->column(QVariantModel::TypeColumn),
                                  QHeaderView::ResizeToContents);
-    header->setDefaultSectionSize(150);
+    header->setMinimumSectionSize(40);
+    header->setDefaultSectionSize(120);
+
+    // connect search
+    connect(ui->lineSearch, &QLineEdit::textChanged,
+            mp_sfModel.data(), &QSortFilterProxyModel::setFilterWildcard);
 
     // connect options
     connect(ui->sliderDepth, &QSlider::valueChanged,
@@ -66,7 +91,6 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 
     rootD.append(QVariant(l1));
     rootD.append(QVariant(l2));
-    rootD.append(QVariant(h1));
     rootD.append(QVariant(h2));
 
     mp_model->setRootData(QVariant(rootD));
@@ -102,4 +126,16 @@ void QTreeVariantWidget::write()
 void QTreeVariantWidget::setOptionsVisible(bool visible)
 {
     ui->widgetOptions->setVisible(visible);
+}
+
+void QTreeVariantWidget::setSearchVisible(bool visible)
+{
+    ui->widgetSearch->setVisible(visible);
+}
+
+void QTreeVariantWidget::searchTypeChanged(int index)
+{
+    QFullFilterProxyModel::FilterType ftype =
+            (QFullFilterProxyModel::FilterType)ui->comboFilterType->itemData(index).toInt();
+    mp_sfModel->setFilterType(ftype);
 }

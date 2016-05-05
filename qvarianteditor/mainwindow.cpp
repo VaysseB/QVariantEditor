@@ -97,6 +97,12 @@ void MainWindow::new_()
     int index = ui->tabWidget->addTab(tvw, tvw->windowTitle());
     ui->tabWidget->setCurrentIndex(index);
 
+    // search
+    connect(ui->actionShowSearchBox, &QAction::toggled,
+            tvw, &QTreeVariantWidget::setSearchVisible);
+    tvw->setSearchVisible(ui->actionShowSearchBox->isChecked());
+
+    // options
     connect(ui->actionShowOptionSidebar, &QAction::toggled,
             tvw, &QTreeVariantWidget::setOptionsVisible);
     tvw->setOptionsVisible(ui->actionShowOptionSidebar->isChecked());

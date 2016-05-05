@@ -6,6 +6,7 @@
 #include <QWidget>
 
 #include "qvariantmodel.h"
+#include "qfullfilterproxymodel.h"
 
 namespace Ui {
 class QTreeVariantWidget;
@@ -31,13 +32,18 @@ public slots:
     void read();
     void write();
 
+    void setSearchVisible(bool visible);
     void setOptionsVisible(bool visible);
+
+private slots:
+    void searchTypeChanged(int index);
 
 private:
     Ui::QTreeVariantWidget *ui;
 
     QString m_filename;
 
+    QSharedPointer<QFullFilterProxyModel> mp_sfModel;
     QSharedPointer<QVariantModel> mp_model;
 };
 

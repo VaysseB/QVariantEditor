@@ -53,8 +53,10 @@
     <addaction name="actionClose"/>
     <addaction name="separator"/>
     <addaction name="actionShowOptionSidebar"/>
+    <addaction name="actionShowSearchBox"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -90,6 +92,7 @@
    <addaction name="actionSaveAs"/>
    <addaction name="actionClose"/>
    <addaction name="separator"/>
+   <addaction name="actionShowSearchBox"/>
    <addaction name="actionShowOptionSidebar"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
@@ -195,10 +198,22 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="taskbar"/>
+    <iconset theme="taskbar">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Show option sidebar</string>
+   </property>
+  </action>
+  <action name="actionShowSearchBox">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset theme="search"/>
+   </property>
+   <property name="text">
+    <string>Show search box</string>
    </property>
   </action>
  </widget>
