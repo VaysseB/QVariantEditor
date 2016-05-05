@@ -2,6 +2,7 @@
 #include "ui_qtreevariantwidget.h"
 
 #include <QFileInfo>
+#include <QMenu>
 #include <QDebug>
 
 
@@ -12,15 +13,31 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // tree view options
     ui->treeView->setModel(mp_model.data());
 
+    // tree view header options
+    QHeaderView* header = ui->treeView->header();
+    header->setSectionsMovable(true);
+    header->setSectionResizeMode(mp_model->column(QVariantModel::KeyColumn),
+                                 QHeaderView::Interactive);
+    header->setSectionResizeMode(mp_model->column(QVariantModel::ValueColumn),
+                                 QHeaderView::Interactive);
+    header->setSectionResizeMode(mp_model->column(QVariantModel::TypeColumn),
+                                 QHeaderView::ResizeToContents);
+    header->setDefaultSectionSize(150);
+
+    // connect options
     connect(ui->sliderDepth, &QSlider::valueChanged,
             mp_model.data(), &QVariantModel::setDisplayDepth);
 
+    // init with value
     setFilename(QString());
     setWindowModified(true);
     emit widgetModified(isWindowModified());
 
+
+    // todo remove
     QVariantList rootD;
     rootD.append(QVariant(5));
     rootD.append(QVariant("string"));
@@ -79,6 +96,8 @@ void QTreeVariantWidget::write()
     setWindowModified(false);
     emit widgetModified(isWindowModified());
 }
+
+//------------------------------------------------------------------------------
 
 void QTreeVariantWidget::setOptionsVisible(bool visible)
 {

@@ -62,8 +62,10 @@ uint QVariantModel::displayDepth() const
 void QVariantModel::setDisplayDepth(uint depth)
 {
     m_depth = depth;
+
     // update all the column
-    emit dataChanged(index(0, 1), index(rowCount()-1, 1));
+    if (column(ValueColumn) >= 0)
+        emit dataChanged(index(0, column(ValueColumn)), index(rowCount()-1, column(ValueColumn)));
 }
 
 //------------------------------------------------------------------------------
@@ -124,7 +126,7 @@ int QVariantModel::rowCount(const QModelIndex& parent) const
 int QVariantModel::columnCount(const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
-    return 3;
+    return ColumnCount;
 }
 
 Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
@@ -137,17 +139,12 @@ QVariant QVariantModel::headerData(int section, Qt::Orientation orientation, int
 {
     if (orientation == Qt::Horizontal) {
         if (role == Qt::DisplayRole) {
-            switch (section)
-            {
-            case 0:
+            if (section == column(KeyColumn))
                 return QLatin1Literal("Key / Index");
-            case 1:
+            else if (section == column(ValueColumn))
                 return QLatin1Literal("Value");
-            case 2:
+            else if (section == column(TypeColumn))
                 return QLatin1Literal("Data type");
-            default:
-                break;
-            }
         }
     }
     else {
@@ -166,20 +163,60 @@ QVariant QVariantModel::data(const QModelIndex& index, int role) const
     Q_ASSERT(node);
 
     if (role == Qt::DisplayRole) {
-        switch (index.column())
-        {
-        case 0:
+        if (index.column() == column(KeyColumn))
             return QVariantDataInfo(node->keyInParent).displayText();
-        case 1:
+        else if (index.column() == column(ValueColumn))
             return QVariantDataInfo(node->value).displayText(m_depth);
-        case 2:
+        else if (index.column() == column(TypeColumn))
             return node->value.typeName();
-        default:
-            break;
-        }
     }
 
     return QVariant();
 }
+
+//------------------------------------------------------------------------------
+
+int QVariantModel::column(Column column) const
+{
+    switch(column)
+    {
+    case QVariantModel::KeyColumn:
+        return 0;
+    case QVariantModel::ValueColumn:
+        return 1;
+    case QVariantModel::TypeColumn:
+        return 2;
+    default:
+        break;
+    }
+    return -1;
+}
+
+//int QVariantModel::realColumn(Column col) const
+//{
+//    switch(col)
+//    {
+//    case KeyColumn:
+//        return keyColumn();
+//    case ValueColumn:
+//        return valueColumn();
+//    case TypeColumn:
+//        return typeColumn();
+//    }
+//    return -1;
+//}
+
+//void QVariantModel::swapColumn(int column1, int column2)
+//{
+
+//}
+
+//void QVariantModel::swapColumn(Column column1, Column column2)
+//{
+//    int col1 = realColumn(column1);
+//    int col2 = realColumn(column2);
+//    if (col1 >= 0 && col2 >= 0)
+//        swapColumn(col1, col2);
+//}
 
 //void QVariantModel::setData(const QModelIndex& index, const QVariant& value, int role);

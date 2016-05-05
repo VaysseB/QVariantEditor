@@ -20,6 +20,15 @@ class QVariantModel : public QAbstractItemModel
     };
 
 public:
+    enum Column {
+        KeyColumn,
+        ValueColumn,
+        TypeColumn,
+        ColumnCount,
+        IndexColumn = KeyColumn
+    };
+
+public:
     explicit QVariantModel(QObject* parent = nullptr);
     virtual ~QVariantModel();
 
@@ -39,16 +48,23 @@ public:
 
     uint displayDepth() const;
 
+    int column(Column column) const;
+
 public slots:
     void setRootData(const QVariant& rootData);
 
     void setDisplayDepth(uint depth);
+
+//    void swapColumn(int column1, int column2);
+//    void swapColumn(Column column1, Column column2);
 
 private:
     void buildTree(node_t& node,
                    const QVariant& data,
                    node_t* parent = nullptr,
                    const QVariant& keyInParent = QVariant()) const;
+
+//    int realColumn(Column col) const;
 
 private:
     QSharedPointer<node_t> mp_root;
