@@ -26,17 +26,10 @@ private:
 class QMutableVariantDataInfo : public QVariantDataInfo
 {
 public:
-    enum EditFlag {
-        NoEdit = 0,
-        KeysAreEditable = (1 << 1),
-        ValuesAreEditable = (1 << 2)
-    };
-    Q_DECLARE_FLAGS(EditFlags, EditFlag)
-
-public:
     QMutableVariantDataInfo(QVariant& data);
 
-    EditFlags flags() const;
+    bool editableKeys() const;
+    bool editableValues() const;
 
     void setContainerKey(const QVariant& oldKey, const QVariant& newKey);
     void setContainerValue(const QVariant& key, const QVariant& value);
@@ -44,8 +37,6 @@ public:
 private:
     QVariant& m_mutdata;
 };
-
-Q_DECLARE_OPERATORS_FOR_FLAGS(QMutableVariantDataInfo::EditFlags)
 
 
 //==============================================================================

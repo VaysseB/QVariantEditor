@@ -21,8 +21,10 @@ public:
     explicit QFullFilterProxyModel(QObject *parent = 0);
     virtual ~QFullFilterProxyModel();
 
-    bool filterAcceptsColumn(int source_column, const QModelIndex &source_parent) const;
-    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const;
+    bool filterAcceptsColumn(int source_column,
+                             const QModelIndex &source_parent) const;
+    bool filterAcceptsRow(int source_row,
+                          const QModelIndex &source_parent) const;
 
     inline FilterType filterType() const { return m_filterType; }
 
@@ -31,6 +33,10 @@ public slots:
 
 signals:
     void filterTypeChanged(FilterType filterType);
+
+protected:
+    bool lessThan(const QModelIndex &source_left,
+                  const QModelIndex &source_right) const;
 
 private:
     FilterType m_filterType;

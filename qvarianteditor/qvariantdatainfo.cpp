@@ -234,33 +234,40 @@ QMutableVariantDataInfo::QMutableVariantDataInfo(QVariant &data) :
 {
 }
 
-QMutableVariantDataInfo::EditFlags QMutableVariantDataInfo::flags() const
+bool QMutableVariantDataInfo::editableKeys() const
 {
-    if (isValid() == false)
-        return NoEdit;
-
-    QMutableVariantDataInfo::EditFlags flags = NoEdit;
-
     // we handle only a reduced number
     switch(m_mutdata.type())
     {
     case QVariant::Map:
     case QVariant::Hash:
-        flags = ValuesAreEditable | KeysAreEditable;
-        break;
-    case QVariant::List:
-        flags = ValuesAreEditable;
-        break;
+        return true;
     default:
         break;
     }
 
-    return flags;
+    return false;
+}
+
+bool QMutableVariantDataInfo::editableValues() const
+{
+    // we handle only a reduced number
+    switch(m_mutdata.type())
+    {
+    case QVariant::Map:
+    case QVariant::Hash:
+    case QVariant::List:
+        return true;
+    default:
+        break;
+    }
+
+    return false;
 }
 
 void QMutableVariantDataInfo::setContainerKey(const QVariant& oldKey, const QVariant& newKey)
 {
-    Q_ASSERT(flags() & KeysAreEditable);
+    Q_ASSERT(editableKeys());
 
     switch(m_mutdata.type())
     {
@@ -279,13 +286,17 @@ void QMutableVariantDataInfo::setContainerKey(const QVariant& oldKey, const QVar
     }
         break;
     default:
+        qDebug("%s:%d: keys should be editable for type %d-%s,"
+               " but implementation is missing",
+               __FILE__, __LINE__,
+               m_mutdata.userType(), qPrintable(m_mutdata.typeName()));
         break;
     }
 }
 
 void QMutableVariantDataInfo::setContainerValue(const QVariant& key, const QVariant& value)
 {
-    Q_ASSERT(flags() & ValuesAreEditable);
+    Q_ASSERT(editableValues());
 
     switch(m_mutdata.type())
     {
@@ -313,6 +324,10 @@ void QMutableVariantDataInfo::setContainerValue(const QVariant& key, const QVari
     }
         break;
     default:
+        qDebug("%s:%d: values should be editable for type %d-%s,"
+               " but implementation is missing",
+               __FILE__, __LINE__,
+               m_mutdata.userType(), qPrintable(m_mutdata.typeName()));
         break;
     }
 }

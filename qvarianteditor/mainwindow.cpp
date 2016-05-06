@@ -209,8 +209,8 @@ void MainWindow::quit()
 void MainWindow::updateWithTab(int index)
 {
     if (index < 0) {
-        setWindowTitle(QString());
         setWindowModified(false);
+        setWindowTitle(QString());
     }
     else {
         QTreeVariantWidget* tvw = qobject_cast<QTreeVariantWidget*>(
@@ -219,7 +219,7 @@ void MainWindow::updateWithTab(int index)
 
         QString tabName = tvw->windowTitle();
         if (tvw->isWindowModified())
-            tabName.prepend(QString("*"));
+            tabName.append(QString("*"));
         ui->tabWidget->setTabText(index, tabName);
 
         setWindowTitle(tvw->windowTitle() + QString("[*]"));

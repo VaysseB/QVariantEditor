@@ -37,6 +37,7 @@ public slots:
 
 private slots:
     void searchTypeChanged(int index);
+    void modelDataChanged();
 
 private:
     Ui::QTreeVariantWidget *ui;

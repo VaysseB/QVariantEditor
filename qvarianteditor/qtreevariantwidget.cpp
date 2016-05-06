@@ -13,9 +13,16 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // model
+    connect(mp_model.data(), &QVariantModel::rootDatasChanged,
+            this, &QTreeVariantWidget::modelDataChanged);
+
     // filter model
     mp_sfModel->setSourceModel(mp_model.data());
     mp_sfModel->setFilterRole(Qt::DisplayRole);
+    mp_sfModel->setSortRole(Qt::EditRole);
+    mp_sfModel->setSortLocaleAware(false);
+    mp_sfModel->setDynamicSortFilter(false);
 
     ui->comboFilterType->addItem(tr("Contains"), QFullFilterProxyModel::Contains);
     ui->comboFilterType->addItem(tr("Wildcard"), QFullFilterProxyModel::WildCard);
@@ -29,6 +36,7 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 
     // tree view options
     ui->treeView->setModel(mp_sfModel.data());
+    ui->treeView->setExpandsOnDoubleClick(true);
     ui->treeView->setWordWrap(true);
     ui->treeView->setAlternatingRowColors(true);
     ui->treeView->setDragDropOverwriteMode(false);
@@ -36,8 +44,8 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     ui->treeView->setUniformRowHeights(false);
 
     // tree view edit triggers
-    ui->treeView->setEditTriggers(
-                QTreeView::DoubleClicked | QTreeView::EditKeyPressed);
+    ui->treeView->setEditTriggers(QTreeView::DoubleClicked
+                                  | QTreeView::EditKeyPressed);
 
     // tree view header options
     QHeaderView* header = ui->treeView->header();
@@ -62,14 +70,15 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 
     // init with value
     setFilename(QString());
-    setWindowModified(true);
-    emit widgetModified(isWindowModified());
+    modelDataChanged();
 }
 
 QTreeVariantWidget::~QTreeVariantWidget()
 {
     delete ui;
 }
+
+//------------------------------------------------------------------------------
 
 void QTreeVariantWidget::setFilename(const QString& name)
 {
@@ -162,7 +171,19 @@ void QTreeVariantWidget::setSearchVisible(bool visible)
 
 void QTreeVariantWidget::searchTypeChanged(int index)
 {
-    QFullFilterProxyModel::FilterType ftype =
-            (QFullFilterProxyModel::FilterType)ui->comboFilterType->itemData(index).toInt();
-    mp_sfModel->setFilterType(ftype);
+    int itype = ui->comboFilterType->itemData(index).toInt();
+    mp_sfModel->setFilterType((QFullFilterProxyModel::FilterType) itype);
+}
+
+//------------------------------------------------------------------------------
+
+void QTreeVariantWidget::modelDataChanged()
+{
+    // re-sort keys
+    mp_sfModel->sort(mp_model->column(QVariantModel::KeyColumn),
+                     Qt::AscendingOrder);
+
+    // we noticed something changed
+    setWindowModified(true);
+    emit widgetModified(isWindowModified());
 }
