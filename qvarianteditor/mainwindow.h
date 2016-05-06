@@ -38,14 +38,26 @@ private slots:
     void tabNameChanged();
     void tabModified();
 
+    void openRecentFile(); // use sender
+
 private:
     void connectMenu();
     void bindMenuActions();
 
+    void openNewTab(const QString& filename);
+
     void connectTab(QTreeVariantWidget* tvw);
+
+    void createRecentFileActions();
+    void addToRecentFiles(const QString& filename);
+    void updateRecentFileActions();
 
 private:
     Ui::mainwindow *ui;
+
+    enum { MaxRecentFiles = 5 };
+    QAction* m_recentFileActs[MaxRecentFiles];
+    QAction* mp_recentFileSeparator;
 };
 
 #endif // MAINWINDOW_H

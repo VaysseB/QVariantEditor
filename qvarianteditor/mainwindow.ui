@@ -56,7 +56,6 @@
     <addaction name="actionShowSearchBox"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
-    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -210,7 +209,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="search"/>
+    <iconset theme="search">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Show search box</string>

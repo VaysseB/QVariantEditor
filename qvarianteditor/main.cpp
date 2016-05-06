@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     app.setApplicationName("QVariantEditor");
-    app.setApplicationVersion("1.0");
+    app.setApplicationVersion("1.1");
     app.setApplicationDisplayName(app.applicationName());
 
     // traduction

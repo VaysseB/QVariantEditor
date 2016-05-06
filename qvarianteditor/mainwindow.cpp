@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QStandardPaths>
+#include <QSettings>
 
 #include <QDebug>
 
@@ -17,6 +18,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::mainwindow)
 {
     ui->setupUi(this);
+
+    createRecentFileActions();
+    updateRecentFileActions();
 
     bindMenuActions();
     connectMenu();
@@ -68,8 +72,8 @@ void MainWindow::about()
 
     QStringList content;
     content << QString("<h2>%1</h2>%2")
-                .arg(QApplication::applicationName())
-                .arg(tr("QVariant file explorer and editor."));
+               .arg(QApplication::applicationName())
+               .arg(tr("QVariant file explorer and editor."));
     content << tr("Version: ") + QApplication::applicationVersion() + tr(", Qt ") + QT_VERSION_STR;
     content << "";
     content << tr("Author(s): ") + author.join(", ");
@@ -113,7 +117,7 @@ void MainWindow::new_()
 void MainWindow::open()
 {
     QTreeVariantWidget* tvw = qobject_cast<QTreeVariantWidget*>(
-            ui->tabWidget->currentWidget());
+                ui->tabWidget->currentWidget());
 
     QString openFilename = tvw ? tvw->filename() : QString();
 
@@ -125,24 +129,29 @@ void MainWindow::open()
     openFilename = QFileDialog::getOpenFileName(
                 this, tr("Open file"), openFilename);
 
-    if (!openFilename.isEmpty()) {
-        tvw = new QTreeVariantWidget;
+    if (!openFilename.isEmpty())
+        openNewTab(openFilename);
+}
 
-        QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-        statusBar()->showMessage(tr("Loading %1").arg(openFilename));
+void MainWindow::openNewTab(const QString& filename)
+{
+    QTreeVariantWidget* tvw = new QTreeVariantWidget;
 
-        tvw->setFilename(openFilename);
-        tvw->read();
+    QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+    statusBar()->showMessage(tr("Loading %1").arg(filename));
 
-        QApplication::restoreOverrideCursor();
-        statusBar()->showMessage(tr("File loaded %1").arg(openFilename), 2500);
+    tvw->setFilename(filename);
+    tvw->read();
 
-        int index = ui->tabWidget->addTab(tvw, tvw->windowTitle());
-        ui->tabWidget->setCurrentIndex(index);
+    QApplication::restoreOverrideCursor();
+    statusBar()->showMessage(tr("File loaded %1").arg(filename), 2500);
 
-        connectTab(tvw);
-    }
+    int index = ui->tabWidget->addTab(tvw, tvw->windowTitle());
+    ui->tabWidget->setCurrentIndex(index);
 
+    connectTab(tvw);
+
+    addToRecentFiles(filename);
 }
 
 void MainWindow::save(bool forceAsk)
@@ -151,7 +160,7 @@ void MainWindow::save(bool forceAsk)
         return;
 
     QTreeVariantWidget* tvw = qobject_cast<QTreeVariantWidget*>(
-            ui->tabWidget->currentWidget());
+                ui->tabWidget->currentWidget());
     Q_ASSERT(tvw);
     bool tvw_is_new = tvw && tvw->filename().isEmpty();
 
@@ -167,16 +176,19 @@ void MainWindow::save(bool forceAsk)
                     this, tr("Save file"), saveFilename);
     }
 
-    if (!saveFilename.isEmpty()) {
-        QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-        statusBar()->showMessage(tr("Saving %1").arg(saveFilename));
+    if (saveFilename.isEmpty())
+        return;
 
-        tvw->setFilename(saveFilename);
-        tvw->write();
+    QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+    statusBar()->showMessage(tr("Saving %1").arg(saveFilename));
 
-        QApplication::restoreOverrideCursor();
-        statusBar()->showMessage(tr("File saved %1").arg(saveFilename), 2500);
-    }
+    tvw->setFilename(saveFilename);
+    tvw->write();
+
+    QApplication::restoreOverrideCursor();
+    statusBar()->showMessage(tr("File saved %1").arg(saveFilename), 2500);
+
+    addToRecentFiles(saveFilename);
 }
 
 void MainWindow::close()
@@ -260,4 +272,61 @@ void MainWindow::connectTab(QTreeVariantWidget* tvw)
     connect(ui->actionShowOptionSidebar, &QAction::toggled,
             tvw, &QTreeVariantWidget::setOptionsVisible);
     tvw->setOptionsVisible(ui->actionShowOptionSidebar->isChecked());
+}
+
+//------------------------------------------------------------------------------
+
+void MainWindow::openRecentFile()
+{
+    QAction *action = qobject_cast<QAction*>(sender());
+    if (action)
+        openNewTab(action->data().toString());
+}
+
+void MainWindow::createRecentFileActions()
+{
+    for (int i = 0; i < (int)MaxRecentFiles; i++) {
+        m_recentFileActs[i] = new QAction(this);
+        ui->menuFile->insertAction(ui->actionQuit, m_recentFileActs[i]);
+        m_recentFileActs[i]->setVisible(false);
+        connect(m_recentFileActs[i], &QAction::triggered,
+                this, &MainWindow::openRecentFile);
+    }
+    mp_recentFileSeparator = ui->menuFile->insertSeparator(ui->actionQuit);
+}
+
+void MainWindow::addToRecentFiles(const QString& filename)
+{
+    QSettings settings;
+    QStringList files = settings.value("recentFileList").toStringList();
+
+    files.removeOne(filename);
+    files.prepend(filename);
+
+    while (files.count() > (int)MaxRecentFiles)
+        files.removeLast();
+
+    settings.setValue("recentFileList", files);
+
+    updateRecentFileActions();
+}
+
+void MainWindow::updateRecentFileActions()
+{
+    QSettings settings;
+    QStringList files = settings.value("recentFileList").toStringList();
+
+    int numRecentFiles = qMin(files.size(), (int)MaxRecentFiles);
+
+    for (int i = 0; i < numRecentFiles; ++i) {
+        QFileInfo fileInfo(files[i]);
+        QString text = tr("&%1 %2").arg(i + 1).arg(fileInfo.fileName());
+        m_recentFileActs[i]->setText(text);
+        m_recentFileActs[i]->setData(files[i]);
+        m_recentFileActs[i]->setVisible(true);
+    }
+    for (int j = numRecentFiles; j < MaxRecentFiles; ++j)
+        m_recentFileActs[j]->setVisible(false);
+
+    mp_recentFileSeparator->setVisible(numRecentFiles > 0);
 }
