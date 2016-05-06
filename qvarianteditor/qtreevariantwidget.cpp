@@ -36,7 +36,8 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     ui->treeView->setUniformRowHeights(false);
 
     // tree view edit triggers
-    ui->treeView->setEditTriggers(QTreeView::AllEditTriggers);
+    ui->treeView->setEditTriggers(
+                QTreeView::DoubleClicked | QTreeView::EditKeyPressed);
 
     // tree view header options
     QHeaderView* header = ui->treeView->header();

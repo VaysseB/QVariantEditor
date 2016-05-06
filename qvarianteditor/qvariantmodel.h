@@ -43,7 +43,7 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QVariant data(const QModelIndex& index, int role) const;
-//    void setData(const QModelIndex& index, const QVariant& value, int role);
+    bool setData(const QModelIndex& index, const QVariant& value, int role);
 
     QVariantList rootDatas() const;
 
@@ -59,16 +59,15 @@ public slots:
 
     void setDisplayDepth(uint depth);
 
-//    void swapColumn(int column1, int column2);
-//    void swapColumn(Column column1, Column column2);
-
 private:
     void buildTree(node_t& node,
                    const QVariant& data,
                    node_t* parent = nullptr,
                    const QVariant& keyInParent = QVariant()) const;
 
-//    int realColumn(Column col) const;
+#ifdef QT_DEBUG
+    void dumpTree(const node_t *root, const QString& prefix = QString()) const;
+#endif
 
 private:
     QSharedPointer<node_t> mp_root;

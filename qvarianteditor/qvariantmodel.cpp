@@ -147,14 +147,18 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
     if (index.column() == column(ValueColumn)) {
         if (mutDInfo.isAtomic()) {
 
-            // editable only if the parent can update the value
-            QMutableVariantDataInfo mutDInfoParent(node->parent->value);
-            if (mutDInfoParent.isValid() && mutDInfoParent.isContainer()) {
-                if (mutDInfoParent.flags() & QMutableVariantDataInfo::ValuesAreEditable)
-                    flags |= Qt::ItemIsEditable;
+            // editable only if all the parents can update values
+            bool parentUpdatable = true;
+            while (node->parent != nullptr && parentUpdatable) {
+                QMutableVariantDataInfo mutDInfoParent(node->parent->value);
+                Q_ASSERT(mutDInfoParent.isValid());
+                Q_ASSERT(mutDInfoParent.isContainer());
+                parentUpdatable = (mutDInfoParent.flags() & QMutableVariantDataInfo::ValuesAreEditable);
+                node = node->parent;
             }
-            // if no parent
-            else {
+
+            // if no parent or all parents are editable
+            if (parentUpdatable) {
                 flags |= Qt::ItemIsEditable;
             }
         }
@@ -231,31 +235,70 @@ int QVariantModel::column(Column column) const
     return -1;
 }
 
-//int QVariantModel::realColumn(Column col) const
-//{
-//    switch(col)
-//    {
-//    case KeyColumn:
-//        return keyColumn();
-//    case ValueColumn:
-//        return valueColumn();
-//    case TypeColumn:
-//        return typeColumn();
-//    }
-//    return -1;
-//}
+//------------------------------------------------------------------------------
 
-//void QVariantModel::swapColumn(int column1, int column2)
-//{
+bool QVariantModel::setData(const QModelIndex& index,
+                            const QVariant& value,
+                            int role)
+{
+    if (index.isValid() == false)
+        return false;
+    if (role != Qt::EditRole)
+        return false;
 
-//}
+    node_t* node = static_cast<node_t*>(index.internalPointer());
+    Q_ASSERT(node != nullptr);
 
-//void QVariantModel::swapColumn(Column column1, Column column2)
-//{
-//    int col1 = realColumn(column1);
-//    int col2 = realColumn(column2);
-//    if (col1 >= 0 && col2 >= 0)
-//        swapColumn(col1, col2);
-//}
+    Q_ASSERT(node->value.userType() == value.userType());
 
-//void QVariantModel::setData(const QModelIndex& index, const QVariant& value, int role);
+    // if no changes
+    if (node->value == value)
+        return true;
+
+    if (index.column() == column(ValueColumn)) {
+        Q_ASSERT(node->parent != nullptr);
+
+        // update the value
+        node->value = value;
+        // emit the update on all children of the node parent (in case of changing order)
+        emit dataChanged(createIndex(0, columnCount(), node->parent),
+                         createIndex(node->parent->children.count(), columnCount(), node->parent),
+                         QVector<int>() << role << Qt::DisplayRole);
+
+        // update all parents
+        QModelIndex indexNode = index;
+        while (node->parent != nullptr) {
+            QMutableVariantDataInfo mutDInfoParent(node->parent->value);
+            Q_ASSERT(mutDInfoParent.isValid());
+            Q_ASSERT(mutDInfoParent.isContainer());
+            Q_ASSERT(mutDInfoParent.flags() & QMutableVariantDataInfo::ValuesAreEditable);
+
+            mutDInfoParent.setContainerValue(node->keyInParent, node->value);
+            node = node->parent;
+
+            QModelIndex parentIndex = indexNode.parent();
+            emit dataChanged(parentIndex,
+                             parentIndex,
+                             QVector<int>() << Qt::DisplayRole);
+            indexNode = parentIndex;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+//------------------------------------------------------------------------------
+
+void QVariantModel::dumpTree(const node_t* root, const QString& prefix) const
+{
+    qDebug().nospace() << (prefix + "node(type="
+                       + QString::number(root->value.userType())
+                       + "-" + root->value.typeName()
+                       + ", key=" + root->keyInParent.toString()
+                       + ", value=" + root->value.toString()
+                       + ")");
+    foreach(node_t* child, root->children)
+        dumpTree(child, prefix + "--");
+}

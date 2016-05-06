@@ -1,5 +1,7 @@
 #include "qvariantdatainfo.h"
 
+#include <QDebug>
+
 
 
 QVariantDataInfo::QVariantDataInfo(const QVariant &cdata) :
@@ -290,6 +292,7 @@ void QMutableVariantDataInfo::setContainerValue(const QVariant& key, const QVari
     case QVariant::Map: {
         QVariantMap map = m_mutdata.toMap();
         Q_ASSERT(map.contains(key.toString()));
+        map.remove(key.toString());
         map.insert(key.toString(), value);
         m_mutdata = map;
     }
@@ -297,8 +300,16 @@ void QMutableVariantDataInfo::setContainerValue(const QVariant& key, const QVari
     case QVariant::Hash: {
         QVariantHash hash = m_mutdata.toHash();
         Q_ASSERT(hash.contains(key.toString()));
+        hash.remove(key.toString());
         hash.insert(key.toString(), value);
         m_mutdata = hash;
+    }
+        break;
+    case QVariant::List: {
+        QVariantList list = m_mutdata.toList();
+        Q_ASSERT(key.toInt() >= 0 && key.toInt() < list.count());
+        list.replace(key.toInt(), value);
+        m_mutdata = list;
     }
         break;
     default:
