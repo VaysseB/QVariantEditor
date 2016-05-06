@@ -119,8 +119,15 @@ void MainWindow::open()
     QTreeVariantWidget* tvw = qobject_cast<QTreeVariantWidget*>(
                 ui->tabWidget->currentWidget());
 
-    QString openFilename = tvw ? tvw->filename() : QString();
+    QString openFilename;
 
+    if (tvw)
+        openFilename = tvw->filename();
+
+    if (openFilename.isEmpty()) {
+        QSettings settings;
+        openFilename = settings.value("lastFile").toString();
+    }
     if (openFilename.isEmpty()) {
         openFilename = QStandardPaths::standardLocations(
                     QStandardPaths::HomeLocation).value(0);
@@ -166,6 +173,10 @@ void MainWindow::save(bool forceAsk)
 
     QString saveFilename = tvw->filename();
 
+    if (saveFilename.isEmpty()) {
+        QSettings settings;
+        saveFilename = settings.value("lastFile").toString();
+    }
     if (saveFilename.isEmpty()) {
         saveFilename = QStandardPaths::writableLocation(
                     QStandardPaths::HomeLocation);
@@ -291,6 +302,7 @@ void MainWindow::clearRecentFiles()
     files.clear();
 
     settings.setValue("recentFileList", files);
+    settings.setValue("lastFile", QString());
 
     updateRecentFileActions();
 }
@@ -326,6 +338,7 @@ void MainWindow::addToRecentFiles(const QString& filename)
         files.removeLast();
 
     settings.setValue("recentFileList", files);
+    settings.setValue("lastFile", filename);
 
     updateRecentFileActions();
 }
