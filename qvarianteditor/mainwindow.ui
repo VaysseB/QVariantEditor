@@ -156,30 +156,6 @@
     <enum>QAction::QuitRole</enum>
    </property>
   </action>
-  <action name="actionAdd">
-   <property name="icon">
-    <iconset theme="list-add">
-     <normaloff>.</normaloff>.</iconset>
-   </property>
-   <property name="text">
-    <string>Add</string>
-   </property>
-   <property name="shortcut">
-    <string notr="true">Ctrl+I</string>
-   </property>
-  </action>
-  <action name="actionRemove">
-   <property name="icon">
-    <iconset theme="list-remove">
-     <normaloff>.</normaloff>.</iconset>
-   </property>
-   <property name="text">
-    <string>Remove</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+D</string>
-   </property>
-  </action>
   <action name="actionAbout">
    <property name="icon">
     <iconset theme="help-about">

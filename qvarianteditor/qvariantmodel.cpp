@@ -212,11 +212,11 @@ QVariant QVariantModel::headerData(int section,
     if (orientation == Qt::Horizontal) {
         if (role == Qt::DisplayRole) {
             if (section == column(KeyColumn))
-                return QLatin1Literal("Key / Index");
+                return tr("Key / Index");
             else if (section == column(ValueColumn))
-                return QLatin1Literal("Value");
+                return tr("Value");
             else if (section == column(TypeColumn))
-                return QLatin1Literal("Data type");
+                return tr("Data type");
         }
     }
     else {
