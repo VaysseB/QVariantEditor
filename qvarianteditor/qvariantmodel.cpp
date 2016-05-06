@@ -18,17 +18,19 @@ QVariantModel::~QVariantModel()
 
 //------------------------------------------------------------------------------
 
-void QVariantModel::setRootDatas(const QVariant& rootData)
+void QVariantModel::setRootDatas(const QVariantList &rootDatas)
 {
     beginResetModel();
     mp_root.reset(new node_t);
-    buildTree(*mp_root, rootData);
+    buildTree(*mp_root, QVariant(rootDatas));
     endResetModel();
+
+    emit rootDatasChanged(rootDatas);
 }
 
-QVariant QVariantModel::rootDatas() const
+QVariantList QVariantModel::rootDatas() const
 {
-    return mp_root->value;
+    return mp_root->value.toList();
 }
 
 void QVariantModel::buildTree(

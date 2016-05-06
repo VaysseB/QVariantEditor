@@ -126,7 +126,7 @@ void QTreeVariantWidget::write()
     }
 
     QDataStream ostream(&output);
-    QVariantList datas = mp_model->rootDatas().toList();
+    QVariantList datas = mp_model->rootDatas();
     for (auto it = datas.constBegin(); it != datas.constEnd()
          && ostream.status() == QDataStream::Ok; ++it) {
         ostream << *it;

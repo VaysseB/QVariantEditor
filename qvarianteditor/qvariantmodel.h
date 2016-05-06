@@ -9,6 +9,7 @@
 class QVariantModel : public QAbstractItemModel
 {
     Q_OBJECT
+    Q_PROPERTY(QVariantList rootDatas READ rootDatas WRITE setRootDatas NOTIFY rootDatasChanged)
 
     struct node_t {
         QVariant value;
@@ -44,14 +45,17 @@ public:
     QVariant data(const QModelIndex& index, int role) const;
 //    void setData(const QModelIndex& index, const QVariant& value, int role);
 
-    QVariant rootDatas() const;
+    QVariantList rootDatas() const;
 
     uint displayDepth() const;
 
     int column(Column column) const;
 
+signals:
+    void rootDatasChanged(const QVariantList& rootDatas);
+
 public slots:
-    void setRootDatas(const QVariant& rootDatas);
+    void setRootDatas(const QVariantList& rootDatas);
 
     void setDisplayDepth(uint depth);
 
