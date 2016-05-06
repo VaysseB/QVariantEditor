@@ -18,6 +18,19 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    bindMenuActions();
+    connectMenu();
+    connect(ui->tabWidget, SIGNAL(currentChanged(int)),
+            this, SLOT(updateWithTab(int)));
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
+void MainWindow::connectMenu()
+{
     // signals to actions
     connect(ui->actionNew, SIGNAL(triggered()),
             this, SLOT(new_()));
@@ -33,15 +46,19 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(quit()));
     connect(ui->actionAbout, SIGNAL(triggered()),
             this, SLOT(about()));
-
-    connect(ui->tabWidget, SIGNAL(currentChanged(int)),
-            this, SLOT(updateWithTab(int)));
 }
 
-MainWindow::~MainWindow()
+void MainWindow::bindMenuActions()
 {
-    delete ui;
+    ui->actionNew->setShortcuts(QKeySequence::New);
+    ui->actionOpen->setShortcuts(QKeySequence::Open);
+    ui->actionSave->setShortcuts(QKeySequence::Save);
+    ui->actionSaveAs->setShortcuts(QKeySequence::SaveAs);
+    ui->actionClose->setShortcuts(QKeySequence::Close);
+    ui->actionQuit->setShortcuts(QKeySequence::Quit);
+    ui->actionShowSearchBox->setShortcut(QKeySequence::Find);
 }
+
 //------------------------------------------------------------------------------
 
 void MainWindow::about()

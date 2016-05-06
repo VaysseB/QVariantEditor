@@ -39,6 +39,9 @@ private slots:
     void tabModified();
 
 private:
+    void connectMenu();
+    void bindMenuActions();
+
     void connectTab(QTreeVariantWidget* tvw);
 
 private:
