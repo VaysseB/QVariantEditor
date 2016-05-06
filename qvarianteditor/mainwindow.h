@@ -39,6 +39,7 @@ private slots:
     void tabModified();
 
     void openRecentFile(); // use sender
+    void clearRecentFiles();
 
 private:
     void connectMenu();
@@ -58,6 +59,7 @@ private:
     enum { MaxRecentFiles = 5 };
     QAction* m_recentFileActs[MaxRecentFiles];
     QAction* mp_recentFileSeparator;
+    QAction* mp_clearRecentFiles;
 };
 
 #endif // MAINWINDOW_H

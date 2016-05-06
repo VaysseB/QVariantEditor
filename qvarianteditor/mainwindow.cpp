@@ -283,6 +283,18 @@ void MainWindow::openRecentFile()
         openNewTab(action->data().toString());
 }
 
+void MainWindow::clearRecentFiles()
+{
+    QSettings settings;
+    QStringList files = settings.value("recentFileList").toStringList();
+
+    files.clear();
+
+    settings.setValue("recentFileList", files);
+
+    updateRecentFileActions();
+}
+
 void MainWindow::createRecentFileActions()
 {
     for (int i = 0; i < (int)MaxRecentFiles; i++) {
@@ -292,6 +304,13 @@ void MainWindow::createRecentFileActions()
         connect(m_recentFileActs[i], &QAction::triggered,
                 this, &MainWindow::openRecentFile);
     }
+
+    mp_clearRecentFiles = new QAction(this);
+    mp_clearRecentFiles->setText(tr("Clear recent files"));
+    connect(mp_clearRecentFiles, &QAction::triggered,
+            this, &MainWindow::clearRecentFiles);
+    ui->menuFile->insertAction(ui->actionQuit, mp_clearRecentFiles);
+
     mp_recentFileSeparator = ui->menuFile->insertSeparator(ui->actionQuit);
 }
 
@@ -328,5 +347,6 @@ void MainWindow::updateRecentFileActions()
     for (int j = numRecentFiles; j < MaxRecentFiles; ++j)
         m_recentFileActs[j]->setVisible(false);
 
+    mp_clearRecentFiles->setVisible(numRecentFiles > 0);
     mp_recentFileSeparator->setVisible(numRecentFiles > 0);
 }
