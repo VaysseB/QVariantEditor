@@ -21,7 +21,9 @@ bool QVariantDataInfo::isValid() const
     switch(m_cdata.type())
     {
     case QVariant::Bool:
+    case QVariant::UInt:
     case QVariant::Int:
+    case QVariant::Double:
     case QVariant::Map:
     case QVariant::List:
     case QVariant::String:
@@ -100,8 +102,10 @@ bool QVariantDataInfo::isAtomic() const
     switch(m_cdata.type())
     {
     case QVariant::Bool:
+    case QVariant::UInt:
     case QVariant::Int:
     case QVariant::String:
+    case QVariant::Double:
         v = true;
         break;
     default:
@@ -197,8 +201,14 @@ QString QVariantDataInfo::displayText(int depth) const
                 ? QStringLiteral("true")
                 : QStringLiteral("false");
         break;
+    case QVariant::UInt:
+        repr = QString::number(m_cdata.toUInt());
+        break;
     case QVariant::Int:
         repr = QString::number(m_cdata.toInt());
+        break;
+    case QVariant::Double:
+        repr = QString::number(m_cdata.toDouble(), 'f');
         break;
     case QVariant::String:
         repr = QString("\"%1\"").arg(m_cdata.toString());
