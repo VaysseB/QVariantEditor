@@ -45,11 +45,11 @@ void QVariantModel::buildTree(
 
     QVariantDataInfo dInfo(node.value);
 
-    if (dInfo.isValid() && dInfo.isCollection()) {
-        QVariantList keys = dInfo.collectionKeys();
+    if (dInfo.isValid() && dInfo.isContainer()) {
+        QVariantList keys = dInfo.containerKeys();
         node.children.reserve(keys.count());
         for (auto itkey = keys.constBegin(); itkey != keys.constEnd(); ++itkey){
-            QVariant childData = dInfo.collectionValue(*itkey);
+            QVariant childData = dInfo.containerValue(*itkey);
             node.children.append(new node_t);
             buildTree(*node.children.last(), childData, &node, *itkey);
         }
@@ -96,8 +96,8 @@ QModelIndex QVariantModel::parent(const QModelIndex& child) const
         Q_ASSERT(node);
         if (node->parent && node->parent != mp_root.data()) {
             QVariantDataInfo dInfo(node->parent->value);
-            Q_ASSERT(dInfo.isValid() && dInfo.isCollection());
-            int row = dInfo.collectionKeys().indexOf(node->keyInParent);
+            Q_ASSERT(dInfo.isValid() && dInfo.isContainer());
+            int row = dInfo.containerKeys().indexOf(node->keyInParent);
             Q_ASSERT(row >= 0);
             return createIndex(row, child.column(), node->parent);
         }
@@ -133,8 +133,37 @@ int QVariantModel::columnCount(const QModelIndex& parent) const
 
 Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
 {
-    Q_UNUSED(index);
-    return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+    Qt::ItemFlags flags = Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+    if (!index.isValid())
+        return flags;
+
+    node_t* node = static_cast<node_t*>(index.internalPointer());
+    Q_ASSERT(node);
+
+    QMutableVariantDataInfo mutDInfo(node->value);
+    if (mutDInfo.isValid() == false)
+        return flags;
+
+    if (index.column() == column(ValueColumn)) {
+        if (mutDInfo.isAtomic()) {
+
+            // editable only if the parent can update the value
+            QMutableVariantDataInfo mutDInfoParent(node->parent->value);
+            if (mutDInfoParent.isValid() && mutDInfoParent.isContainer()) {
+                if (mutDInfoParent.flags() & QMutableVariantDataInfo::ValuesAreEditable)
+                    flags |= Qt::ItemIsEditable;
+            }
+            // if no parent
+            else {
+                flags |= Qt::ItemIsEditable;
+            }
+        }
+    }
+    else if (index.column() == column(TypeColumn)) {
+        flags |= Qt::ItemIsEditable;
+    }
+
+    return flags;
 }
 
 QVariant QVariantModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -171,6 +200,14 @@ QVariant QVariantModel::data(const QModelIndex& index, int role) const
             return QVariantDataInfo(node->value).displayText(m_depth);
         else if (index.column() == column(TypeColumn))
             return node->value.typeName();
+    }
+    else if (role == Qt::EditRole) {
+        if (index.column() == column(KeyColumn))
+            return node->keyInParent;
+        else if (index.column() == column(ValueColumn))
+            return node->value;
+        else if (index.column() == column(TypeColumn))
+            return node->value.type();
     }
 
     return QVariant();

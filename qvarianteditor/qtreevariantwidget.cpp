@@ -35,6 +35,9 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     ui->treeView->setProperty("showDropIndicator", QVariant(false));
     ui->treeView->setUniformRowHeights(false);
 
+    // tree view edit triggers
+    ui->treeView->setEditTriggers(QTreeView::AllEditTriggers);
+
     // tree view header options
     QHeaderView* header = ui->treeView->header();
     header->setStretchLastSection(false);
@@ -126,7 +129,7 @@ void QTreeVariantWidget::write()
     }
 
     QDataStream ostream(&output);
-    QVariantList datas = mp_model->rootDatas();
+    QVariantList datas = mp_model->rootDatas()  ;
     for (auto it = datas.constBegin(); it != datas.constEnd()
          && ostream.status() == QDataStream::Ok; ++it) {
         ostream << *it;

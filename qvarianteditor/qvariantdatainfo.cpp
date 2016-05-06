@@ -109,7 +109,7 @@ bool QVariantDataInfo::isAtomic() const
     return v;
 }
 
-bool QVariantDataInfo::isCollection() const
+bool QVariantDataInfo::isContainer() const
 {
     bool v = false;
 
@@ -130,9 +130,9 @@ bool QVariantDataInfo::isCollection() const
 
 //------------------------------------------------------------------------------
 
-QList<QVariant> QVariantDataInfo::collectionKeys() const
+QList<QVariant> QVariantDataInfo::containerKeys() const
 {
-    Q_ASSERT(isCollection());
+    Q_ASSERT(isContainer());
     QList<QVariant> keys;
 
     // we handle only a reduced number
@@ -154,9 +154,9 @@ QList<QVariant> QVariantDataInfo::collectionKeys() const
     return keys;
 }
 
-QVariant QVariantDataInfo::collectionValue(const QVariant& key) const
+QVariant QVariantDataInfo::containerValue(const QVariant& key) const
 {
-    Q_ASSERT(isCollection());
+    Q_ASSERT(isContainer());
     QVariant value;
 
     // we handle only a reduced number
@@ -232,26 +232,76 @@ QMutableVariantDataInfo::QMutableVariantDataInfo(QVariant &data) :
 {
 }
 
-void QMutableVariantDataInfo::setCollectionValue(const QVariant& key, const QVariant& value)
+QMutableVariantDataInfo::EditFlags QMutableVariantDataInfo::flags() const
 {
-    Q_ASSERT(isCollection());
+    if (isValid() == false)
+        return NoEdit;
 
+    QMutableVariantDataInfo::EditFlags flags = NoEdit;
+
+    // we handle only a reduced number
+    switch(m_mutdata.type())
+    {
+    case QVariant::Map:
+    case QVariant::Hash:
+        flags = ValuesAreEditable | KeysAreEditable;
+        break;
+    case QVariant::List:
+        flags = ValuesAreEditable;
+        break;
+    default:
+        break;
+    }
+
+    return flags;
 }
 
-void QMutableVariantDataInfo::removeCollectionValue(const QVariant& key)
+void QMutableVariantDataInfo::setContainerKey(const QVariant& oldKey, const QVariant& newKey)
 {
-    Q_ASSERT(isCollection());
+    Q_ASSERT(flags() & KeysAreEditable);
 
+    switch(m_mutdata.type())
+    {
+    case QVariant::Map: {
+        QVariantMap map = m_mutdata.toMap();
+        Q_ASSERT(map.contains(oldKey.toString()));
+        map.insert(newKey.toString(), map.take(oldKey.toString()));
+        m_mutdata = map;
+    }
+        break;
+    case QVariant::Hash: {
+        QVariantHash hash = m_mutdata.toHash();
+        Q_ASSERT(hash.contains(oldKey.toString()));
+        hash.insert(newKey.toString(), hash.take(oldKey.toString()));
+        m_mutdata = hash;
+    }
+        break;
+    default:
+        break;
+    }
 }
 
-QVariant QMutableVariantDataInfo::addNewCollectionItem()
+void QMutableVariantDataInfo::setContainerValue(const QVariant& key, const QVariant& value)
 {
-    Q_ASSERT(isCollection());
-    return QVariant();
-}
+    Q_ASSERT(flags() & ValuesAreEditable);
 
-QVariant QMutableVariantDataInfo::insertBeforeNewCollectionItem(const QVariant& afterKey)
-{
-    Q_ASSERT(isCollection());
-    return QVariant();
+    switch(m_mutdata.type())
+    {
+    case QVariant::Map: {
+        QVariantMap map = m_mutdata.toMap();
+        Q_ASSERT(map.contains(key.toString()));
+        map.insert(key.toString(), value);
+        m_mutdata = map;
+    }
+        break;
+    case QVariant::Hash: {
+        QVariantHash hash = m_mutdata.toHash();
+        Q_ASSERT(hash.contains(key.toString()));
+        hash.insert(key.toString(), value);
+        m_mutdata = hash;
+    }
+        break;
+    default:
+        break;
+    }
 }

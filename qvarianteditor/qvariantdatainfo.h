@@ -12,10 +12,10 @@ public:
     bool isValid() const;
 
     bool isAtomic() const;
-    bool isCollection() const;
+    bool isContainer() const;
 
-    QList<QVariant> collectionKeys() const;
-    QVariant collectionValue(const QVariant& key) const;
+    QList<QVariant> containerKeys() const;
+    QVariant containerValue(const QVariant& key) const;
 
     QString displayText(int depth = 3) const;
 
@@ -26,16 +26,26 @@ private:
 class QMutableVariantDataInfo : public QVariantDataInfo
 {
 public:
+    enum EditFlag {
+        NoEdit = 0,
+        KeysAreEditable = (1 << 1),
+        ValuesAreEditable = (1 << 2)
+    };
+    Q_DECLARE_FLAGS(EditFlags, EditFlag)
+
+public:
     QMutableVariantDataInfo(QVariant& data);
 
-    void setCollectionValue(const QVariant& key, const QVariant& value);
-    QVariant insertBeforeNewCollectionItem(const QVariant& afterKey);
-    QVariant addNewCollectionItem();
-    void removeCollectionValue(const QVariant& key);
+    EditFlags flags() const;
+
+    void setContainerKey(const QVariant& oldKey, const QVariant& newKey);
+    void setContainerValue(const QVariant& key, const QVariant& value);
 
 private:
     QVariant& m_mutdata;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(QMutableVariantDataInfo::EditFlags)
 
 
 //==============================================================================
