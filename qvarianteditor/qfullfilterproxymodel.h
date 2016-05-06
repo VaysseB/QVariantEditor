@@ -31,6 +31,9 @@ public:
 public slots:
     void setFilterType(FilterType filterType);
 
+    void setFilterKeyColumn(int column);
+    void setFilterKeyColumns(QList<int> columns);
+
 signals:
     void filterTypeChanged(FilterType filterType);
 
@@ -39,7 +42,11 @@ protected:
                   const QModelIndex &source_right) const;
 
 private:
+    void forceUpdate();
+
+private:
     FilterType m_filterType;
+    QList<int> m_filterColumns;
 };
 
 

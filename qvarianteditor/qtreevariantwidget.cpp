@@ -24,6 +24,14 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     mp_sfModel->setSortLocaleAware(false);
     mp_sfModel->setDynamicSortFilter(false);
 
+    // search field
+    ui->comboFilterField->addItem(tr("All fields"));
+    ui->comboFilterField->addItem(tr("Key/Index"), QVariantModel::KeyColumn);
+    ui->comboFilterField->addItem(tr("Value"), QVariantModel::ValueColumn);
+    ui->comboFilterField->addItem(tr("Type"), QVariantModel::TypeColumn);
+    ui->comboFilterField->setCurrentIndex(0);
+
+    // search type
     ui->comboFilterType->addItem(tr("Contains"), QFullFilterProxyModel::Contains);
     ui->comboFilterType->addItem(tr("Wildcard"), QFullFilterProxyModel::WildCard);
     ui->comboFilterType->addItem(tr("Regex"), QFullFilterProxyModel::Regex);
@@ -33,6 +41,8 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     void (QComboBox::* currentIndexChangedPtr)(int) = &QComboBox::currentIndexChanged;
     connect(ui->comboFilterType, currentIndexChangedPtr,
             this, &QTreeVariantWidget::searchTypeChanged);
+    connect(ui->comboFilterField, currentIndexChangedPtr,
+            this, &QTreeVariantWidget::searchFieldsChanged);
 
     // tree view options
     ui->treeView->setModel(mp_sfModel.data());
@@ -173,6 +183,20 @@ void QTreeVariantWidget::searchTypeChanged(int index)
 {
     int itype = ui->comboFilterType->itemData(index).toInt();
     mp_sfModel->setFilterType((QFullFilterProxyModel::FilterType) itype);
+}
+
+void QTreeVariantWidget::searchFieldsChanged(int index)
+{
+    QVariant vcol = ui->comboFilterField->itemData(index);
+    if (vcol.isNull()) {
+        mp_sfModel->setFilterKeyColumns(
+                    QList<int>() << mp_model->column(QVariantModel::KeyColumn)
+                    << mp_model->column(QVariantModel::ValueColumn)
+                    << mp_model->column(QVariantModel::TypeColumn));
+    }
+    else {
+        mp_sfModel->setFilterKeyColumn((QVariantModel::Column)vcol.toInt());
+    }
 }
 
 //------------------------------------------------------------------------------

@@ -38,16 +38,11 @@ bool QFullFilterProxyModel::filterAcceptsRow(
     QRegExp rx(pattern, Qt::CaseSensitive,
                (m_filterType == WildCard) ? QRegExp::WildcardUnix : QRegExp::RegExp2);
 
-    for (int c = 0; c < sourceModel()->columnCount(source_parent); c++) {
-        QModelIndex child = sourceModel()->index(source_row, c, source_parent);
+    for (auto itCol = m_filterColumns.constBegin();
+         itCol != m_filterColumns.constEnd(); ++itCol) {
+        QModelIndex child = sourceModel()->index(source_row, *itCol, source_parent);
 
         QString text = child.data(filterRole()).toString();
-
-        // clear string
-        if (text.startsWith(QChar('"')))
-            text.remove(0, 1);
-        if (text.endsWith(QChar('"')))
-            text.remove(text.length()-1, text.length());
 
         bool isRowOk = false;
 
@@ -69,17 +64,6 @@ bool QFullFilterProxyModel::filterAcceptsRow(
         }
     }
     return false;
-}
-
-void QFullFilterProxyModel::setFilterType(FilterType filterType)
-{
-    m_filterType = filterType;
-    emit filterTypeChanged(filterType);
-
-    // force to filter again
-    QString pattern = filterRegExp().pattern();
-    setFilterWildcard(QString());
-    setFilterWildcard(pattern);
 }
 
 bool QFullFilterProxyModel::lessThan(
@@ -128,4 +112,35 @@ bool QFullFilterProxyModel::lessThan(
         isLess = QSortFilterProxyModel::lessThan(source_left, source_right);
 
     return isLess;
+}
+
+void QFullFilterProxyModel::forceUpdate()
+{
+    // force to filter again
+    QString pattern = filterRegExp().pattern();
+    setFilterWildcard(QString());
+    setFilterWildcard(pattern);
+}
+
+void QFullFilterProxyModel::setFilterType(FilterType filterType)
+{
+    m_filterType = filterType;
+    emit filterTypeChanged(filterType);
+
+    forceUpdate();
+}
+
+void QFullFilterProxyModel::setFilterKeyColumn(int column)
+{
+    m_filterColumns.clear();
+    m_filterColumns.append(column);
+
+    forceUpdate();
+}
+
+void QFullFilterProxyModel::setFilterKeyColumns(QList<int> columns)
+{
+    m_filterColumns = columns;
+
+    forceUpdate();
 }
