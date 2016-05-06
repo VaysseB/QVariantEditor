@@ -18,7 +18,7 @@ QVariantModel::~QVariantModel()
 
 //------------------------------------------------------------------------------
 
-void QVariantModel::setRootData(const QVariant& rootData)
+void QVariantModel::setRootDatas(const QVariant& rootData)
 {
     beginResetModel();
     mp_root.reset(new node_t);
@@ -26,7 +26,7 @@ void QVariantModel::setRootData(const QVariant& rootData)
     endResetModel();
 }
 
-QVariant QVariantModel::rootData() const
+QVariant QVariantModel::rootDatas() const
 {
     return mp_root->value;
 }

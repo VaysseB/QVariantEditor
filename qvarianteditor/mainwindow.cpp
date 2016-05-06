@@ -87,25 +87,10 @@ void MainWindow::new_()
 {
     QTreeVariantWidget* tvw = new QTreeVariantWidget;
 
-    connect(tvw, SIGNAL(windowTitleChanged(QString)),
-            this, SLOT(tabNameChanged()));
-    connect(tvw, SIGNAL(widgetModified(bool)),
-            this, SLOT(tabModified()));
-    connect(tvw, SIGNAL(widgetModified(bool)),
-            this, SLOT(setWindowModified(bool)));
-
     int index = ui->tabWidget->addTab(tvw, tvw->windowTitle());
     ui->tabWidget->setCurrentIndex(index);
 
-    // search
-    connect(ui->actionShowSearchBox, &QAction::toggled,
-            tvw, &QTreeVariantWidget::setSearchVisible);
-    tvw->setSearchVisible(ui->actionShowSearchBox->isChecked());
-
-    // options
-    connect(ui->actionShowOptionSidebar, &QAction::toggled,
-            tvw, &QTreeVariantWidget::setOptionsVisible);
-    tvw->setOptionsVisible(ui->actionShowOptionSidebar->isChecked());
+    connectTab(tvw);
 }
 
 void MainWindow::open()
@@ -135,15 +120,10 @@ void MainWindow::open()
         QApplication::restoreOverrideCursor();
         statusBar()->showMessage(tr("File loaded %1").arg(openFilename), 2500);
 
-        connect(tvw, SIGNAL(windowTitleChanged(QString)),
-                this, SLOT(tabNameChanged()));
-        connect(tvw, SIGNAL(widgetModified(bool)),
-                this, SLOT(tabModified()));
-        connect(tvw, SIGNAL(widgetModified(bool)),
-                this, SLOT(setWindowModified(bool)));
-
         int index = ui->tabWidget->addTab(tvw, tvw->windowTitle());
         ui->tabWidget->setCurrentIndex(index);
+
+        connectTab(tvw);
     }
 
 }
@@ -242,4 +222,25 @@ void MainWindow::tabNameChanged()
 void MainWindow::tabModified()
 {
     tabNameChanged();
+}
+
+void MainWindow::connectTab(QTreeVariantWidget* tvw)
+{
+    // widget name & state
+    connect(tvw, SIGNAL(windowTitleChanged(QString)),
+            this, SLOT(tabNameChanged()));
+    connect(tvw, SIGNAL(widgetModified(bool)),
+            this, SLOT(tabModified()));
+    connect(tvw, SIGNAL(widgetModified(bool)),
+            this, SLOT(setWindowModified(bool)));
+
+    // search
+    connect(ui->actionShowSearchBox, &QAction::toggled,
+            tvw, &QTreeVariantWidget::setSearchVisible);
+    tvw->setSearchVisible(ui->actionShowSearchBox->isChecked());
+
+    // options
+    connect(ui->actionShowOptionSidebar, &QAction::toggled,
+            tvw, &QTreeVariantWidget::setOptionsVisible);
+    tvw->setOptionsVisible(ui->actionShowOptionSidebar->isChecked());
 }

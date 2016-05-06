@@ -60,40 +60,6 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     setFilename(QString());
     setWindowModified(true);
     emit widgetModified(isWindowModified());
-
-
-    // todo remove
-    QVariantList rootD;
-    rootD.append(QVariant(5));
-    rootD.append(QVariant("string"));
-
-    QVariantList l1;
-    l1.append(QVariant(0));
-    l1.append(QVariant(5));
-    l1.append(QVariant(10));
-    l1.append(QVariant(15));
-
-    QVariantList l2;
-    l2.append(QVariant("first"));
-    l2.append(QVariant("second"));
-    l2.append(QVariant("third"));
-    l2.append(QVariant("fourth"));
-
-    QVariantMap h1;
-    h1.insert("int", QVariant(-54687));
-    h1.insert("string", QVariant("name"));
-    h1.insert("bool", QVariant(true));
-
-    QVariantHash h2;
-    h2.insert("string", QVariant("sub"));
-    h2.insert("map", QVariant(h1));
-    h2.insert("int", QVariant(INT_MAX));
-
-    rootD.append(QVariant(l1));
-    rootD.append(QVariant(l2));
-    rootD.append(QVariant(h2));
-
-    mp_model->setRootData(QVariant(rootD));
 }
 
 QTreeVariantWidget::~QTreeVariantWidget()
@@ -111,12 +77,69 @@ void QTreeVariantWidget::setFilename(const QString& name)
 
 void QTreeVariantWidget::read()
 {
+    if (m_filename.isEmpty())
+        return;
+
+    QFile output(m_filename);
+    if (output.open(QIODevice::ReadOnly) == false) {
+        qWarning("cannot open file to read %s", qPrintable(m_filename));
+        return;
+    }
+
+    QDataStream istream(&output);
+    QVariantList datas;
+
+    while (istream.atEnd() == false && istream.status() == QDataStream::Ok) {
+        QVariant oneData;
+        istream >> oneData;
+        datas.append(oneData);
+    }
+
+    switch (istream.status()) {
+    case QDataStream::ReadPastEnd:
+        qWarning("read past end while reading %s", qPrintable(m_filename));
+        return;
+    case QDataStream::ReadCorruptData:
+        qWarning("read corrupted datas in %s", qPrintable(m_filename));
+        return;
+    default:
+        break;
+    }
+
+    mp_model->setRootDatas(datas);
+
+    output.close();
+
     setWindowModified(false);
     emit widgetModified(isWindowModified());
 }
 
 void QTreeVariantWidget::write()
 {
+    if (m_filename.isEmpty())
+        return;
+
+    QFile output(m_filename);
+    if (output.open(QIODevice::WriteOnly | QIODevice::Truncate) == false) {
+        qWarning("cannot open file to write %s", qPrintable(m_filename));
+        return;
+    }
+
+    QDataStream ostream(&output);
+    QVariantList datas = mp_model->rootDatas().toList();
+    for (auto it = datas.constBegin(); it != datas.constEnd()
+         && ostream.status() == QDataStream::Ok; ++it) {
+        ostream << *it;
+    }
+
+    if (ostream.status() == QDataStream::WriteFailed) {
+        qWarning("write failed to %s", qPrintable(m_filename));
+        return;
+    }
+
+    output.close();
+
+    // write succeed
     setWindowModified(false);
     emit widgetModified(isWindowModified());
 }

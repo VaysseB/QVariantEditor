@@ -39,6 +39,9 @@ private slots:
     void tabModified();
 
 private:
+    void connectTab(QTreeVariantWidget* tvw);
+
+private:
     Ui::mainwindow *ui;
 };
 

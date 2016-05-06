@@ -44,14 +44,14 @@ public:
     QVariant data(const QModelIndex& index, int role) const;
 //    void setData(const QModelIndex& index, const QVariant& value, int role);
 
-    QVariant rootData() const;
+    QVariant rootDatas() const;
 
     uint displayDepth() const;
 
     int column(Column column) const;
 
 public slots:
-    void setRootData(const QVariant& rootData);
+    void setRootDatas(const QVariant& rootDatas);
 
     void setDisplayDepth(uint depth);
 
