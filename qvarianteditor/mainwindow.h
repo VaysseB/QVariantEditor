@@ -35,6 +35,7 @@ private slots:
     void about();
 
     void updateWithTab(int index);
+    void closeTab(int index);
     void tabNameChanged();
     void tabModified();
 

@@ -24,8 +24,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     bindMenuActions();
     connectMenu();
+
     connect(ui->tabWidget, &QTabWidget::currentChanged,
             this, &MainWindow::updateWithTab);
+    connect(ui->tabWidget, &QTabWidget::tabCloseRequested,
+            this, &MainWindow::closeTab);
 }
 
 MainWindow::~MainWindow()
@@ -212,19 +215,7 @@ void MainWindow::close()
     if (ui->tabWidget->count() <= 0)
         return;
 
-    QMessageBox::StandardButton resp = QMessageBox::Yes;
-
-    if (isWindowModified()) {
-        resp = QMessageBox::question(
-                    this,
-                    tr("Close"),
-                    tr("Some changes are not saved, close anyway ?"),
-                    QMessageBox::Yes | QMessageBox::Cancel | QMessageBox::No,
-                    QMessageBox::No);
-    }
-
-    if (resp == QMessageBox::Yes)
-        ui->tabWidget->removeTab(ui->tabWidget->currentIndex());
+    closeTab(ui->tabWidget->currentIndex());
 }
 
 void MainWindow::quit()
@@ -253,6 +244,26 @@ void MainWindow::updateWithTab(int index)
         setWindowTitle(tvw->windowTitle() + QString("[*]"));
         setWindowModified(tvw->isWindowModified());
     }
+}
+
+void MainWindow::closeTab(int index)
+{
+    QMessageBox::StandardButton resp = QMessageBox::Yes;
+
+    QTreeVariantWidget* tvw = qobject_cast<QTreeVariantWidget*>(
+                ui->tabWidget->widget(index));
+
+    if (tvw->isWindowModified()) {
+        resp = QMessageBox::question(
+                    this,
+                    tr("Close"),
+                    tr("Some changes are not saved, close anyway ?"),
+                    QMessageBox::Yes | QMessageBox::Cancel | QMessageBox::No,
+                    QMessageBox::No);
+    }
+
+    if (resp == QMessageBox::Yes)
+        ui->tabWidget->removeTab(index);
 }
 
 void MainWindow::tabNameChanged()
