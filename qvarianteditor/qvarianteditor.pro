@@ -16,14 +16,12 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     qtreevariantwidget.cpp \
     qvariantmodel.cpp \
-    qvariantdatainfo.cpp \
-    qfullfilterproxymodel.cpp
+    qvariantdatainfo.cpp
 
 HEADERS  += mainwindow.h \
     qtreevariantwidget.h \
     qvariantmodel.h \
-    qvariantdatainfo.h \
-    qfullfilterproxymodel.h
+    qvariantdatainfo.h
 
 FORMS    += mainwindow.ui \
     qtreevariantwidget.ui

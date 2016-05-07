@@ -8,7 +8,6 @@
 QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::QTreeVariantWidget),
-    mp_sfModel(new QFullFilterProxyModel(this)),
     mp_model(new QVariantModel(this))
 {
     ui->setupUi(this);
@@ -18,10 +17,6 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     connect(mp_model.data(), &QVariantModel::rootDatasChanged,
             this, &QTreeVariantWidget::modelDataChanged);
 
-    // filter model
-    mp_sfModel->setSourceModel(mp_model.data());
-    mp_sfModel->setFilterRole(Qt::DisplayRole);
-
     // search field
     ui->comboFilterField->addItem(tr("All fields"));
     ui->comboFilterField->addItem(tr("Key/Index"), QVariantModel::KeyColumn);
@@ -30,10 +25,10 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     ui->comboFilterField->setCurrentIndex(0);
 
     // search type
-    ui->comboFilterType->addItem(tr("Contains"), QFullFilterProxyModel::Contains);
-    ui->comboFilterType->addItem(tr("Wildcard"), QFullFilterProxyModel::WildCard);
-    ui->comboFilterType->addItem(tr("Regex"), QFullFilterProxyModel::Regex);
-    ui->comboFilterType->addItem(tr("Fixed"), QFullFilterProxyModel::Fixed);
+    ui->comboFilterType->addItem(tr("Contains"), QVariantModel::Contains);
+    ui->comboFilterType->addItem(tr("Wildcard"), QVariantModel::WildCard);
+    ui->comboFilterType->addItem(tr("Regex"), QVariantModel::Regex);
+    ui->comboFilterType->addItem(tr("Fixed"), QVariantModel::Fixed);
     ui->comboFilterType->setCurrentIndex(0);
 
     void (QComboBox::* currentIndexChangedPtr)(int) = &QComboBox::currentIndexChanged;
@@ -45,7 +40,7 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     searchFieldsChanged(ui->comboFilterField->currentIndex());
 
     // tree view options
-    ui->treeView->setModel(mp_sfModel.data());
+    ui->treeView->setModel(mp_model.data());
     ui->treeView->setExpandsOnDoubleClick(true);
     ui->treeView->setWordWrap(true);
     ui->treeView->setAlternatingRowColors(true);
@@ -72,7 +67,7 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 
     // connect search
     connect(ui->lineSearch, &QLineEdit::textChanged,
-            mp_sfModel.data(), &QSortFilterProxyModel::setFilterWildcard);
+            mp_model.data(), &QVariantModel::setFilterText);
 
     // connect options
     connect(ui->sliderDepth, &QSlider::valueChanged,
@@ -182,20 +177,19 @@ void QTreeVariantWidget::setSearchVisible(bool visible)
 void QTreeVariantWidget::searchTypeChanged(int index)
 {
     int itype = ui->comboFilterType->itemData(index).toInt();
-    mp_sfModel->setFilterType((QFullFilterProxyModel::FilterType) itype);
+    mp_model->setFilterType((QVariantModel::FilterType) itype);
 }
 
 void QTreeVariantWidget::searchFieldsChanged(int index)
 {
     QVariant vcol = ui->comboFilterField->itemData(index);
     if (vcol.isNull()) {
-        mp_sfModel->setFilterKeyColumns(
-                    QList<int>() << mp_model->column(QVariantModel::KeyColumn)
-                    << mp_model->column(QVariantModel::ValueColumn)
-                    << mp_model->column(QVariantModel::TypeColumn));
+        mp_model->setFilterColumns(QVariantModel::KeyColumn
+                                   | QVariantModel::ValueColumn
+                                   | QVariantModel::TypeColumn);
     }
     else {
-        mp_sfModel->setFilterKeyColumn((QVariantModel::Column)vcol.toInt());
+        mp_model->setFilterColumns((QVariantModel::Column)vcol.toInt());
     }
 }
 

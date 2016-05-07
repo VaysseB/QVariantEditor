@@ -22,8 +22,14 @@ QVariantModel::~QVariantModel()
 void QVariantModel::setRootDatas(const QVariantList &rootDatas)
 {
     beginResetModel();
+
     mp_root.reset(new node_t);
     buildTree(*mp_root, QVariant(rootDatas));
+
+    bool wasFiltered = !m_filterRx.pattern().isEmpty();
+    if (wasFiltered)
+        filterTree(*mp_root);
+
     endResetModel();
 
     emit rootDatasChanged(rootDatas);
@@ -54,17 +60,17 @@ void QVariantModel::buildTree(
             node.children.append(new node_t);
             buildTree(*node.children.last(), childData, &node, *itkey);
         }
+        node.visibleChildren = node.children;
     }
-}
-
-uint QVariantModel::displayDepth() const
-{
-    return m_depth;
 }
 
 void QVariantModel::setDisplayDepth(uint depth)
 {
+    if (m_depth != depth)
+        return;
+
     m_depth = depth;
+    emit displayDepthChanged(m_depth);
 
     // update all children that are containers, and only them
     if (column(ValueColumn) >= 0) {
@@ -75,9 +81,9 @@ void QVariantModel::setDisplayDepth(uint depth)
         QList<node_t*> nodeContainers;
 
         // add direct containers nodes below root
-        for (auto it = mp_root->children.constBegin();
-             it != mp_root->children.constEnd(); ++it) {
-            if ((*it)->children.isEmpty() == false)
+        for (auto it = mp_root->visibleChildren.constBegin();
+             it != mp_root->visibleChildren.constEnd(); ++it) {
+            if ((*it)->visibleChildren.isEmpty() == false)
                 nodeContainers.append(*it);
         }
 
@@ -87,9 +93,9 @@ void QVariantModel::setDisplayDepth(uint depth)
             emit dataChanged(index, index, roles);
 
             // add all children that are also containers
-            for (auto it = node->children.constBegin();
-                 it != node->children.constEnd(); ++it) {
-                if ((*it)->children.isEmpty() == false)
+            for (auto it = node->visibleChildren.constBegin();
+                 it != node->visibleChildren.constEnd(); ++it) {
+                if ((*it)->visibleChildren.isEmpty() == false)
                     nodeContainers.append(*it);
             }
         }
@@ -102,11 +108,9 @@ QModelIndex QVariantModel::indexOfNode(node_t* node, int column) const
 {
     Q_ASSERT(node != nullptr);
     int row = 0;
-    if (node->parent) {
-        const QList<node_t*> siblings(node->parent->children);
-        row = siblings.indexOf(node);
-        Q_ASSERT(row >= 0);
-    }
+    if (node->parent)
+        row = node->parent->visibleChildren.indexOf(node);
+    Q_ASSERT(row >= 0);
     return createIndex(row, column, node);
 }
 
@@ -115,19 +119,19 @@ QModelIndex QVariantModel::indexOfNode(node_t* node, Column col) const
     return indexOfNode(node, column(col));
 }
 
-QModelIndex QVariantModel::index(int row, int column, const QModelIndex& parent) const
+QModelIndex QVariantModel::index(int row, int column,
+                                 const QModelIndex& parent) const
 {
     Q_ASSERT(column >= 0 && column < columnCount());
-//    qDebug() << "index(" << row << column << parent << ")";
 
     node_t* pnode = mp_root.data();
     if (parent.isValid())
         pnode = static_cast<node_t*>(parent.internalPointer());
     Q_ASSERT(pnode);
 
-    int childrenCount = pnode->children.count();
+    int childrenCount = pnode->visibleChildren.count();
     Q_ASSERT(row >= 0 && row < childrenCount);
-    return createIndex(row, column, pnode->children[row]);
+    return createIndex(row, column, pnode->visibleChildren.at(row));
 }
 
 QModelIndex QVariantModel::parent(const QModelIndex& child) const
@@ -147,7 +151,7 @@ bool QVariantModel::hasChildren(const QModelIndex& parent) const
     if (parent.isValid())
         pnode = static_cast<node_t*>(parent.internalPointer());
     Q_ASSERT(pnode);
-    return !pnode->children.isEmpty();
+    return !pnode->visibleChildren.isEmpty();
 }
 
 int QVariantModel::rowCount(const QModelIndex& parent) const
@@ -156,7 +160,7 @@ int QVariantModel::rowCount(const QModelIndex& parent) const
     if (parent.isValid())
         pnode = static_cast<node_t*>(parent.internalPointer());
     Q_ASSERT(pnode);
-    return pnode->children.count();
+    return pnode->visibleChildren.count();
 }
 
 int QVariantModel::columnCount(const QModelIndex& parent) const
@@ -446,7 +450,7 @@ void QVariantModel::setDynamicSort(bool enabled)
 
 void QVariantModel::sortTree(node_t& root, bool recursive)
 {
-    QList<node_t*> newChildOrder = root.children;
+    QList<node_t*> newChildOrder = root.visibleChildren;
 
     // sort direct children
     std::sort(newChildOrder.begin(), newChildOrder.end(),
@@ -462,20 +466,24 @@ void QVariantModel::sortTree(node_t& root, bool recursive)
     int count = newChildOrder.count();
     for (int iNewChild = 0; iNewChild < count; iNewChild++) {
         node_t* child = newChildOrder.at(iNewChild);
-        int iOldChild = root.children.indexOf(child);
+        int iOldChild = root.visibleChildren.indexOf(child);
         Q_ASSERT(iOldChild >= 0);
         // if the child moved
         if (iNewChild < iOldChild) {
-            Q_ASSERT(beginMoveRows(parent, iOldChild, iOldChild, parent, iNewChild));
-            root.children.removeAt(iOldChild);
-            root.children.insert(iNewChild, child);
+            bool canMoveRow = beginMoveRows(parent, iOldChild, iOldChild,
+                                            parent, iNewChild);
+            Q_ASSERT(canMoveRow);
+            root.visibleChildren.removeAt(iOldChild);
+            root.visibleChildren.insert(iNewChild, child);
             endMoveRows();
         }
     }
 
-    if (recursive && root.children.isEmpty() == false) {
-        for (auto it = root.children.begin(); it != root.children.end(); ++it)
+    if (recursive && root.visibleChildren.isEmpty() == false) {
+        for (auto it = root.visibleChildren.begin();
+             it != root.visibleChildren.end(); ++it) {
             sortTree(*(*it), recursive);
+        }
     }
 }
 
@@ -532,14 +540,210 @@ bool QVariantModel::lessThan(const QVariant& left, const QVariant& right) const
 
 //------------------------------------------------------------------------------
 
-void QVariantModel::dumpTree(const node_t* root, const QString& prefix) const
+void QVariantModel::updateFilterRx(QString pattern)
 {
-    qDebug().nospace() << (prefix + "node(type="
+    if (pattern.isEmpty() == false) {
+        if (!pattern.startsWith("*") && m_filterType == WildCard)
+            pattern.prepend(QChar('*'));
+        if (!pattern.endsWith("*") && m_filterType == WildCard)
+            pattern.append(QChar('*'));
+    }
+
+    m_filterRx = QRegExp(pattern, Qt::CaseSensitive,
+                         (m_filterType == WildCard)
+                         ? QRegExp::WildcardUnix : QRegExp::RegExp2);
+}
+
+void QVariantModel::setFilterType(FilterType filterType)
+{
+    if (m_filterType == filterType)
+        return;
+
+    bool wasFiltered = !m_filterRx.pattern().isEmpty();
+
+    m_filterType = filterType;
+    updateFilterRx(m_filterRx.pattern());
+    emit filterTypeChanged(filterType);
+
+    bool nowFiltered = !m_filterRx.pattern().isEmpty();
+
+    if (wasFiltered || nowFiltered) {
+        beginResetModel();
+        filterTree(*mp_root);
+        endResetModel();
+
+        dumpTree(mp_root.data());
+        dumpModel();
+    }
+}
+
+void QVariantModel::setFilterColumns(Columns filterColumns)
+{
+    if (m_filterColumns == filterColumns)
+        return;
+
+    bool wasFiltered = !m_filterRx.pattern().isEmpty();
+
+    m_filterColumns = filterColumns;
+    emit filterColumnsChanged(filterColumns);
+
+    bool nowFiltered = !m_filterRx.pattern().isEmpty();
+
+    if (wasFiltered || nowFiltered) {
+        beginResetModel();
+        filterTree(*mp_root);
+        endResetModel();
+
+        dumpTree(mp_root.data());
+        dumpModel();
+    }
+}
+
+void QVariantModel::setFilterText(const QString& filterText)
+{
+    if (m_filterRx.pattern() == filterText)
+        return;
+
+    bool wasFiltered = !m_filterRx.pattern().isEmpty();
+
+    updateFilterRx(filterText);
+    emit filterTextChanged(filterText);
+
+    bool nowFiltered = !m_filterRx.pattern().isEmpty();
+
+    if (wasFiltered || nowFiltered) {
+        beginResetModel();
+        filterTree(*mp_root);
+        endResetModel();
+
+        dumpTree(mp_root.data());
+        dumpModel();
+    }
+}
+
+bool QVariantModel::filterKey(const QVariant& key) const
+{
+    const QString text = QVariantDataInfo(key).displayText();
+    return filterOnDisplayText(text);
+}
+
+bool QVariantModel::filterValue(const QVariant& value) const
+{
+    const QString text = QVariantDataInfo(value).displayText(m_depth);
+    return filterOnDisplayText(text);
+}
+
+bool QVariantModel::filterType(int type) const
+{
+    const QString text = QVariant::typeToName(type);
+    return filterOnDisplayText(text);
+}
+
+bool QVariantModel::filterOnDisplayText(const QString& text) const
+{
+    bool isRowOk = false;
+
+    if (m_filterType == Contains)
+        isRowOk = text.contains(m_filterRx.pattern());
+    else if (m_filterType == WildCard || m_filterType == Regex)
+        isRowOk = m_filterRx.exactMatch(text);
+    else if (m_filterType == Fixed)
+        isRowOk = (text == m_filterRx.pattern());
+
+    return isRowOk;
+}
+
+bool QVariantModel::filterTree(node_t& root)
+{
+    bool isVisible = false;
+
+    // display all
+    if (m_filterRx.pattern().isEmpty()) {
+        root.visibleChildren = root.children;
+        foreach(node_t* node, root.visibleChildren)
+            filterTree(*node);
+
+        if (m_dynamicSort)
+            sortTree(root, false);
+
+        isVisible = true;
+    }
+    // actual filter
+    else {
+        // check children first
+        root.visibleChildren = root.children;
+        foreach(node_t* node, root.visibleChildren) {
+            bool childVisible = filterTree(*node);
+            isVisible |= childVisible;
+            if (childVisible == false)
+                root.visibleChildren.removeOne(node);
+        }
+
+        if (m_dynamicSort)
+            sortTree(root, false);
+
+        // if at least one children is visible, we are visible
+        // otherwise, we look for ourself
+        if (isVisible == false) {
+            bool fkey = m_filterColumns & KeyColumn;
+            bool vkey = m_filterColumns & ValueColumn;
+            bool tkey = m_filterColumns & TypeColumn;
+
+            isVisible |= (fkey && filterKey(root.keyInParent));
+            isVisible |= (vkey && filterValue(root.value));
+            isVisible |= (tkey && filterType(root.value.userType()));
+        }
+    }
+
+    return isVisible;
+}
+
+//------------------------------------------------------------------------------
+
+void QVariantModel::dumpTree(const node_t* root,
+                             const QString& prefix) const
+{
+#if defined(QT_DEBUG) && defined(QVARIANTMODEL_DEBUG)
+    qDebug().nospace() << (prefix
+                           + "node(type="
                            + QString::number(root->value.userType())
                            + "-" + root->value.typeName()
-                           + ", key=" + root->keyInParent.toString()
-                           + ", value=" + root->value.toString()
+                           + ", key="
+                           + root->keyInParent.toString()
+                           + ", value="
+                           + root->value.toString()
                            + ")");
-    foreach(node_t* child, root->children)
+    foreach(node_t* child, root->visibleChildren)
         dumpTree(child, prefix + "--");
+#else
+    Q_UNUSED(root)
+    Q_UNUSED(prefix)
+#endif
+}
+
+void QVariantModel::dumpModel(const QModelIndex& rootIndex,
+                              const QString& prefix) const
+{
+#if defined(QT_DEBUG) && defined(QVARIANTMODEL_DEBUG)
+    if (rootIndex.isValid()) {
+        qDebug().nospace() << (prefix
+                               + "index(row="
+                               + QString::number(rootIndex.row())
+                               + ", column="
+                               + QString::number(rootIndex.column())
+                               + ", text=\""
+                               + data(rootIndex, Qt::DisplayRole).toString()
+                               + "\")");
+    }
+    else {
+        qDebug().nospace() << (prefix + "index(invalid)");
+    }
+    for (int i=0; i<rowCount(rootIndex); i++) {
+        for (int j=0; j<columnCount(rootIndex); j++)
+            dumpModel(index(i, j, rootIndex), prefix + "--");
+    }
+#else
+    Q_UNUSED(rootIndex)
+    Q_UNUSED(prefix)
+#endif
 }

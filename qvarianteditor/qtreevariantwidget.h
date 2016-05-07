@@ -6,7 +6,6 @@
 #include <QWidget>
 
 #include "qvariantmodel.h"
-#include "qfullfilterproxymodel.h"
 
 namespace Ui {
 class QTreeVariantWidget;
@@ -47,7 +46,6 @@ private:
 
     QString m_filename;
 
-    QSharedPointer<QFullFilterProxyModel> mp_sfModel;
     QSharedPointer<QVariantModel> mp_model;
 };
 
