@@ -10,6 +10,7 @@ class QVariantModel : public QAbstractItemModel
 {
     Q_OBJECT
     Q_PROPERTY(QVariantList rootDatas READ rootDatas WRITE setRootDatas NOTIFY rootDatasChanged)
+    Q_PROPERTY(bool dynamicSort READ dynamicSort WRITE setDynamicSort NOTIFY dynamicSortChanged) // sort only keys/index
 
     struct node_t {
         QVariant value;
@@ -51,19 +52,29 @@ public:
 
     int column(Column column) const;
 
+    inline bool dynamicSort() const { return m_dynamicSort; }
+
 signals:
     void rootDatasChanged(const QVariantList& rootDatas);
+    void dynamicSortChanged(bool enabled);
 
 public slots:
     void setRootDatas(const QVariantList& rootDatas);
 
     void setDisplayDepth(uint depth);
 
+    void setDynamicSort(bool enabled);
+
+protected:
+    virtual bool lessThan(const QVariant& left, const QVariant& right) const;
+
 private:
     void buildTree(node_t& node,
                    const QVariant& data,
                    node_t* parent = nullptr,
                    const QVariant& keyInParent = QVariant()) const;
+
+    void sortTree(node_t& root, bool recursive);
 
 #ifdef QT_DEBUG
     void dumpTree(const node_t *root, const QString& prefix = QString()) const;
@@ -72,6 +83,7 @@ private:
 private:
     QSharedPointer<node_t> mp_root;
     uint m_depth = 0;
+    bool m_dynamicSort;
 };
 
 #endif // QVARIANTMODEL_H

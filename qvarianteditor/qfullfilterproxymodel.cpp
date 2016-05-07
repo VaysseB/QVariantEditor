@@ -66,54 +66,6 @@ bool QFullFilterProxyModel::filterAcceptsRow(
     return false;
 }
 
-bool QFullFilterProxyModel::lessThan(
-        const QModelIndex &source_left,
-        const QModelIndex &source_right) const
-{
-    // invalid < valid
-    // valid > invalid
-    if (source_left.isValid() == false)
-        return source_right.isValid();
-    else if (source_right.isValid() == false)
-        return false;
-
-    bool isLess = true;
-
-    QVariant leftValue = source_left.data(sortRole());
-    QVariant rightValue = source_right.data(sortRole());
-
-    bool sameType = (leftValue.type() == rightValue.type());
-
-    if (sameType && leftValue.type() == QVariant::String) {
-        QString leftString = leftValue.toString();
-        QString rightString = rightValue.toString();
-        if (leftString.count() == rightString.count())
-            isLess = (leftString.count() < rightString.count());
-        else if (isSortLocaleAware())
-            isLess = QString::localeAwareCompare(leftString, rightString) < 0;
-        else
-            isLess = QString::compare(leftString, rightString) < 0;
-    }
-    else if (sameType && leftValue.type() == QVariant::Bool)
-        isLess = (leftValue.toBool() < rightValue.toBool());
-    else if (sameType && leftValue.type() == QVariant::Int)
-        isLess = (leftValue.toInt() < rightValue.toInt());
-    else if (sameType && leftValue.type() == QVariant::UInt)
-        isLess = (leftValue.toUInt() < rightValue.toUInt());
-    else if (leftValue.type() == QVariant::UInt
-             && rightValue.type() == QVariant::Int) {
-        isLess = ((int)leftValue.toUInt() < rightValue.toInt());
-    }
-    else if (leftValue.type() == QVariant::Int
-             && rightValue.type() == QVariant::UInt) {
-        isLess = (leftValue.toInt() < (int)rightValue.toUInt());
-    }
-    else
-        isLess = QSortFilterProxyModel::lessThan(source_left, source_right);
-
-    return isLess;
-}
-
 void QFullFilterProxyModel::forceUpdate()
 {
     // force to filter again

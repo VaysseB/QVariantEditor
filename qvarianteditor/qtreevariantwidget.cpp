@@ -14,15 +14,13 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     ui->setupUi(this);
 
     // model
+    mp_model->setDynamicSort(true);
     connect(mp_model.data(), &QVariantModel::rootDatasChanged,
             this, &QTreeVariantWidget::modelDataChanged);
 
     // filter model
     mp_sfModel->setSourceModel(mp_model.data());
     mp_sfModel->setFilterRole(Qt::DisplayRole);
-    mp_sfModel->setSortRole(Qt::EditRole);
-    mp_sfModel->setSortLocaleAware(false);
-    mp_sfModel->setDynamicSortFilter(false);
 
     // search field
     ui->comboFilterField->addItem(tr("All fields"));
@@ -203,10 +201,6 @@ void QTreeVariantWidget::searchFieldsChanged(int index)
 
 void QTreeVariantWidget::modelDataChanged()
 {
-    // re-sort keys
-    mp_sfModel->sort(mp_model->column(QVariantModel::KeyColumn),
-                     Qt::AscendingOrder);
-
     // we noticed something changed
     setWindowModified(true);
     emit widgetModified(isWindowModified());

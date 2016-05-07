@@ -8,7 +8,8 @@
 QVariantModel::QVariantModel(QObject *parent) :
     QAbstractItemModel(parent),
     mp_root(new node_t),
-    m_depth(1)
+    m_depth(1),
+    m_dynamicSort(false)
 {
 }
 
@@ -301,12 +302,22 @@ bool QVariantModel::setData(const QModelIndex& index,
         // update the value
         node->keyInParent = value;
 
-        // emit the update on all children of the node parent
-        // (in case of changing order)
-        int chCount = node->parent->children.count();
-        emit dataChanged(createIndex(0, columnCount()-1, node->parent),
-                         createIndex(chCount-1, columnCount()-1, node->parent),
-                         QVector<int>() << Qt::DisplayRole);
+        // the order might changed if sort
+        if (m_dynamicSort) {
+            sortTree(*node->parent, false);
+
+            // emit the update on all children of the node parent
+            // (in case of changing order)
+            int chCount = node->parent->children.count();
+            emit dataChanged(createIndex(0, columnCount()-1, node->parent),
+                             createIndex(chCount-1, columnCount()-1, node->parent),
+                             QVector<int>() << Qt::DisplayRole);
+        }
+        // or the order doesn't change at all
+        else {
+            // emith the update of the index node only
+            emit dataChanged(index, index, QVector<int>() << Qt::DisplayRole);
+        }
 
         // update direct parent about node key
         QMutableVariantDataInfo mutDInfoParent(node->parent->value);
@@ -317,13 +328,14 @@ bool QVariantModel::setData(const QModelIndex& index,
 
         // emit the update on all columns of the node parent
         // (in case of changing order)
-        chCount = node->parent->children.count();
+        int chCount = node->parent->children.count();
         emit dataChanged(createIndex(0, columnCount()-1, node->parent),
                          createIndex(chCount-1, columnCount()-1, node->parent),
                          QVector<int>() << Qt::DisplayRole);
 
         // update all parents
         node = node->parent;
+        QModelIndex indexNode = index;
         while (node->parent != nullptr) {
             // change data in parent
             QMutableVariantDataInfo mutDInfoParent(node->parent->value);
@@ -333,15 +345,14 @@ bool QVariantModel::setData(const QModelIndex& index,
 
             mutDInfoParent.setContainerValue(node->keyInParent, node->value);
 
-            // emit the update on all columns of the node parent
-            // (in case of changing order)
-            chCount = node->parent->children.count();
-            emit dataChanged(createIndex(0, columnCount()-1, node->parent),
-                             createIndex(chCount-1, columnCount()-1, node->parent),
+            QModelIndex parentIndex = indexNode.parent();
+            emit dataChanged(parentIndex,
+                             parentIndex,
                              QVector<int>() << Qt::DisplayRole);
 
             // next parent
             node = node->parent;
+            indexNode = parentIndex;
         }
 
         dataChanges = true;
@@ -383,6 +394,89 @@ bool QVariantModel::setData(const QModelIndex& index,
         emit rootDatasChanged(rootDatas());
 
     return dataChanges;
+}
+
+//------------------------------------------------------------------------------
+
+void QVariantModel::setDynamicSort(bool enabled)
+{
+    if (m_dynamicSort == enabled)
+        return;
+
+    m_dynamicSort = enabled;
+    emit dynamicSortChanged(enabled);
+
+    if (rowCount() > 0) {
+        sortTree(*mp_root, true);
+        emit dataChanged(index(0, columnCount()-1),
+                         index(rowCount()-1, columnCount()-1),
+                         QVector<int>() << Qt::DisplayRole);
+    }
+}
+
+void QVariantModel::sortTree(node_t& root, bool recursive)
+{
+    // sort direct children
+    std::sort(root.children.begin(), root.children.end(),
+              [this] (const node_t* left, const node_t* right) {
+        return lessThan(left->keyInParent, right->keyInParent);
+    });
+
+    if (recursive && root.children.isEmpty() == false) {
+        for (auto it = root.children.begin(); it != root.children.end(); ++it)
+            sortTree(*(*it), recursive);
+    }
+}
+
+bool QVariantModel::lessThan(const QVariant& left, const QVariant& right) const
+{
+    bool isLess = true;
+
+    QVariant::Type ltype = left.type();
+    QVariant::Type rtype = right.type();
+    bool sameType = (ltype == rtype);
+
+    // not same type
+    if (sameType == false) {
+        if (ltype == QVariant::UInt && rtype == QVariant::Int)
+            isLess = ((int)left.toUInt() < right.toInt());
+        else if (ltype == QVariant::Int && rtype == QVariant::UInt)
+            isLess = (left.toInt() < (int)right.toUInt());
+        else if (ltype == QVariant::Double && rtype == QVariant::Int)
+            isLess = (left.toDouble() < right.toInt());
+        else if (ltype == QVariant::Int && rtype == QVariant::Double)
+            isLess = (left.toInt() < right.toDouble());
+        else if (ltype == QVariant::UInt && rtype == QVariant::Double)
+            isLess = (left.toUInt() < right.toDouble());
+        else if (ltype == QVariant::Double && rtype == QVariant::UInt)
+            isLess = (left.toDouble() < right.toUInt());
+        else
+            isLess = (left < right);
+    }
+    // same type
+    else {
+        if (ltype == QVariant::String) {
+            QString leftString = left.toString();
+            QString rightString = right.toString();
+            if (leftString.count() == rightString.count())
+                isLess = (leftString.count() < rightString.count());
+            else
+                isLess = QString::compare(leftString, rightString) < 0;
+        }
+        else if (ltype == QVariant::Bool)
+            isLess = (left.toBool() < right.toBool());
+        else if (ltype == QVariant::Int)
+            isLess = (left.toInt() < right.toInt());
+        else if (ltype == QVariant::UInt)
+            isLess = (left.toUInt() < right.toUInt());
+        else if (ltype == QVariant::Double)
+            isLess = (left.toUInt() < right.toUInt());
+        else
+            isLess = (left < right);
+    }
+
+
+    return isLess;
 }
 
 //------------------------------------------------------------------------------
