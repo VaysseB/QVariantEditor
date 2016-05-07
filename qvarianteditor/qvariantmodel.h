@@ -74,6 +74,9 @@ private:
                    node_t* parent = nullptr,
                    const QVariant& keyInParent = QVariant()) const;
 
+    QModelIndex indexOfNode(node_t* node, int column) const;
+    QModelIndex indexOfNode(node_t* node, Column col) const;
+
     void sortTree(node_t& root, bool recursive);
 
 #ifdef QT_DEBUG

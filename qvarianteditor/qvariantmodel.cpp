@@ -66,25 +66,65 @@ void QVariantModel::setDisplayDepth(uint depth)
 {
     m_depth = depth;
 
-    // update all the column
-    if (column(ValueColumn) >= 0)
-        emit dataChanged(index(0, column(ValueColumn)), index(rowCount()-1, column(ValueColumn)));
+    // update all children that are containers, and only them
+    if (column(ValueColumn) >= 0) {
+        QVector<int> roles;
+        roles << Qt::DisplayRole;
+
+        // working list of all nodes that are containers
+        QList<node_t*> nodeContainers;
+
+        // add direct containers nodes below root
+        for (auto it = mp_root->children.constBegin();
+             it != mp_root->children.constEnd(); ++it) {
+            if ((*it)->children.isEmpty() == false)
+                nodeContainers.append(*it);
+        }
+
+        while(nodeContainers.isEmpty() == false) {
+            node_t* node = nodeContainers.takeFirst();
+            QModelIndex index = indexOfNode(node, ValueColumn);
+            emit dataChanged(index, index, roles);
+
+            // add all children that are also containers
+            for (auto it = node->children.constBegin();
+                 it != node->children.constEnd(); ++it) {
+                if ((*it)->children.isEmpty() == false)
+                    nodeContainers.append(*it);
+            }
+        }
+    }
 }
 
 //------------------------------------------------------------------------------
 
+QModelIndex QVariantModel::indexOfNode(node_t* node, int column) const
+{
+    Q_ASSERT(node != nullptr);
+    int row = 0;
+    if (node->parent) {
+        const QList<node_t*> siblings(node->parent->children);
+        row = siblings.indexOf(node);
+        Q_ASSERT(row >= 0);
+    }
+    return createIndex(row, column, node);
+}
+
+QModelIndex QVariantModel::indexOfNode(node_t* node, Column col) const
+{
+    return indexOfNode(node, column(col));
+}
+
 QModelIndex QVariantModel::index(int row, int column, const QModelIndex& parent) const
 {
     Q_ASSERT(column >= 0 && column < columnCount());
+//    qDebug() << "index(" << row << column << parent << ")";
 
-    if (!parent.isValid()) {
-        int childrenCount = mp_root->children.count();
-        Q_ASSERT(row >= 0 && row < childrenCount);
-        return createIndex(row, column, mp_root->children[row]);
-    }
-
-    node_t* pnode = static_cast<node_t*>(parent.internalPointer());
+    node_t* pnode = mp_root.data();
+    if (parent.isValid())
+        pnode = static_cast<node_t*>(parent.internalPointer());
     Q_ASSERT(pnode);
+
     int childrenCount = pnode->children.count();
     Q_ASSERT(row >= 0 && row < childrenCount);
     return createIndex(row, column, pnode->children[row]);
@@ -95,33 +135,28 @@ QModelIndex QVariantModel::parent(const QModelIndex& child) const
     if (child.isValid()) {
         node_t* node = static_cast<node_t*>(child.internalPointer());
         Q_ASSERT(node);
-        if (node->parent && node->parent != mp_root.data()) {
-            int row = node->parent->children.indexOf(node);
-            Q_ASSERT(row >= 0);
-            return createIndex(row, child.column(), node->parent);
-        }
+        if (node->parent && node->parent != mp_root.data())
+            return indexOfNode(node->parent, child.column());
     }
     return QModelIndex();
 }
 
 bool QVariantModel::hasChildren(const QModelIndex& parent) const
 {
-    if (parent.isValid()) {
-        node_t* pnode = static_cast<node_t*>(parent.internalPointer());
-        Q_ASSERT(pnode);
-        return !pnode->children.isEmpty();
-    }
-    return !mp_root->children.isEmpty();
+    node_t* pnode = mp_root.data();
+    if (parent.isValid())
+        pnode = static_cast<node_t*>(parent.internalPointer());
+    Q_ASSERT(pnode);
+    return !pnode->children.isEmpty();
 }
 
 int QVariantModel::rowCount(const QModelIndex& parent) const
 {
-    if (parent.isValid()) {
-        node_t* pnode = static_cast<node_t*>(parent.internalPointer());
-        Q_ASSERT(pnode);
-        return pnode->children.count();
-    }
-    return mp_root->children.count();
+    node_t* pnode = mp_root.data();
+    if (parent.isValid())
+        pnode = static_cast<node_t*>(parent.internalPointer());
+    Q_ASSERT(pnode);
+    return pnode->children.count();
 }
 
 int QVariantModel::columnCount(const QModelIndex& parent) const
@@ -294,6 +329,9 @@ bool QVariantModel::setData(const QModelIndex& index,
 
     bool dataChanges = false;
 
+    QVector<int> displayRole;
+    displayRole << Qt::DisplayRole;
+
     if (index.column() == column(KeyColumn)) {
         Q_ASSERT(node->parent != nullptr);
 
@@ -302,23 +340,6 @@ bool QVariantModel::setData(const QModelIndex& index,
         // update the value
         node->keyInParent = value;
 
-        // the order might changed if sort
-        if (m_dynamicSort) {
-            sortTree(*node->parent, false);
-
-            // emit the update on all children of the node parent
-            // (in case of changing order)
-            int chCount = node->parent->children.count();
-            emit dataChanged(createIndex(0, columnCount()-1, node->parent),
-                             createIndex(chCount-1, columnCount()-1, node->parent),
-                             QVector<int>() << Qt::DisplayRole);
-        }
-        // or the order doesn't change at all
-        else {
-            // emith the update of the index node only
-            emit dataChanged(index, index, QVector<int>() << Qt::DisplayRole);
-        }
-
         // update direct parent about node key
         QMutableVariantDataInfo mutDInfoParent(node->parent->value);
         Q_ASSERT(mutDInfoParent.isValid());
@@ -326,65 +347,78 @@ bool QVariantModel::setData(const QModelIndex& index,
         Q_ASSERT(mutDInfoParent.editableKeys());
         mutDInfoParent.setContainerKey(oldKey, node->keyInParent);
 
-        // emit the update on all columns of the node parent
-        // (in case of changing order)
-        int chCount = node->parent->children.count();
-        emit dataChanged(createIndex(0, columnCount()-1, node->parent),
-                         createIndex(chCount-1, columnCount()-1, node->parent),
-                         QVector<int>() << Qt::DisplayRole);
+        // update the node index
+        emit dataChanged(index, index, displayRole);
 
-        // update all parents
-        node = node->parent;
-        QModelIndex indexNode = index;
-        while (node->parent != nullptr) {
+        // update its parents
+        node_t* parentNode = node->parent;
+        QModelIndex parentIndex = index.parent();
+        while (parentNode->parent != nullptr) {
+            Q_ASSERT(parentIndex.isValid());
+            Q_ASSERT(parentIndex.internalPointer() == parentNode);
+
             // change data in parent
-            QMutableVariantDataInfo mutDInfoParent(node->parent->value);
+            QMutableVariantDataInfo mutDInfoParent(parentNode->parent->value);
             Q_ASSERT(mutDInfoParent.isValid());
             Q_ASSERT(mutDInfoParent.isContainer());
             Q_ASSERT(mutDInfoParent.editableValues());
+            mutDInfoParent.setContainerValue(parentNode->keyInParent,
+                                             parentNode->value);
 
-            mutDInfoParent.setContainerValue(node->keyInParent, node->value);
+            // next parent (because dataChanged must take the node's parent)
+            parentNode = parentNode->parent;
+            parentIndex = parentIndex.parent();
 
-            QModelIndex parentIndex = indexNode.parent();
-            emit dataChanged(parentIndex,
-                             parentIndex,
-                             QVector<int>() << Qt::DisplayRole);
-
-            // next parent
-            node = node->parent;
-            indexNode = parentIndex;
+            // update parent of parentIndex
+            emit dataChanged(parentIndex, parentIndex, displayRole);
         }
+
+        // the order might changed if sort
+        // do begin/end move rows
+        if (m_dynamicSort)
+            sortTree(*node->parent, false);
 
         dataChanges = true;
     }
     else  if (index.column() == column(ValueColumn)) {
         Q_ASSERT(node->parent != nullptr);
 
+        bool typeChanged = (node->value.userType() != value.userType());
+
         // update the value
         node->value = value;
-        // emit the update of the row (we want to update value+type)
-        emit dataChanged(createIndex(index.row(), 0, node),
-                         createIndex(index.row(), columnCount()-1, node),
-                         QVector<int>() << role << Qt::DisplayRole);
 
-        // update all parents
-        QModelIndex indexNode = index;
-        while (node->parent != nullptr) {
+        // emit the update of the row (we want to update value+type columns)
+        QVector<int> roles = QVector<int>(displayRole) << role;
+        emit dataChanged(index, index, roles); // update value column
+        if (typeChanged) {
+            // update type column
+            emit dataChanged(indexOfNode(node, TypeColumn),
+                             indexOfNode(node, TypeColumn),
+                             roles);
+        }
+
+        // update its parents
+        node_t* parentNode = node;
+        QModelIndex parentIndex = index;
+        while (parentNode->parent != nullptr) {
+            Q_ASSERT(parentIndex.isValid());
+            Q_ASSERT(parentIndex.internalPointer() == parentNode);
+
             // change data in parent
-            QMutableVariantDataInfo mutDInfoParent(node->parent->value);
+            QMutableVariantDataInfo mutDInfoParent(parentNode->parent->value);
             Q_ASSERT(mutDInfoParent.isValid());
             Q_ASSERT(mutDInfoParent.isContainer());
             Q_ASSERT(mutDInfoParent.editableValues());
-            mutDInfoParent.setContainerValue(node->keyInParent, node->value);
+            mutDInfoParent.setContainerValue(parentNode->keyInParent,
+                                             parentNode->value);
 
-            QModelIndex parentIndex = indexNode.parent();
-            emit dataChanged(parentIndex,
-                             parentIndex,
-                             QVector<int>() << Qt::DisplayRole);
+            // next parent (because dataChanged must take the node's parent)
+            parentNode = parentNode->parent;
+            parentIndex = parentIndex.parent();
 
-            // next parent
-            node = node->parent;
-            indexNode = parentIndex;
+            // update parent of parentIndex
+            emit dataChanged(parentIndex, parentIndex, displayRole);
         }
 
         dataChanges = true;
@@ -406,21 +440,38 @@ void QVariantModel::setDynamicSort(bool enabled)
     m_dynamicSort = enabled;
     emit dynamicSortChanged(enabled);
 
-    if (rowCount() > 0) {
+    if (rowCount() > 0)
         sortTree(*mp_root, true);
-        emit dataChanged(index(0, columnCount()-1),
-                         index(rowCount()-1, columnCount()-1),
-                         QVector<int>() << Qt::DisplayRole);
-    }
 }
 
 void QVariantModel::sortTree(node_t& root, bool recursive)
 {
+    QList<node_t*> newChildOrder = root.children;
+
     // sort direct children
-    std::sort(root.children.begin(), root.children.end(),
+    std::sort(newChildOrder.begin(), newChildOrder.end(),
               [this] (const node_t* left, const node_t* right) {
         return lessThan(left->keyInParent, right->keyInParent);
     });
+
+    QModelIndex parent;
+    if (root.parent)
+        parent = indexOfNode(&root, KeyColumn);
+
+    // move rows
+    int count = newChildOrder.count();
+    for (int iNewChild = 0; iNewChild < count; iNewChild++) {
+        node_t* child = newChildOrder.at(iNewChild);
+        int iOldChild = root.children.indexOf(child);
+        Q_ASSERT(iOldChild >= 0);
+        // if the child moved
+        if (iNewChild < iOldChild) {
+            Q_ASSERT(beginMoveRows(parent, iOldChild, iOldChild, parent, iNewChild));
+            root.children.removeAt(iOldChild);
+            root.children.insert(iNewChild, child);
+            endMoveRows();
+        }
+    }
 
     if (recursive && root.children.isEmpty() == false) {
         for (auto it = root.children.begin(); it != root.children.end(); ++it)
@@ -458,7 +509,7 @@ bool QVariantModel::lessThan(const QVariant& left, const QVariant& right) const
         if (ltype == QVariant::String) {
             QString leftString = left.toString();
             QString rightString = right.toString();
-            if (leftString.count() == rightString.count())
+            if (leftString.count() != rightString.count())
                 isLess = (leftString.count() < rightString.count());
             else
                 isLess = QString::compare(leftString, rightString) < 0;

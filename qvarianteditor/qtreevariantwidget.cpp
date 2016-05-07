@@ -41,6 +41,8 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
             this, &QTreeVariantWidget::searchTypeChanged);
     connect(ui->comboFilterField, currentIndexChangedPtr,
             this, &QTreeVariantWidget::searchFieldsChanged);
+    searchTypeChanged(ui->comboFilterType->currentIndex());
+    searchFieldsChanged(ui->comboFilterField->currentIndex());
 
     // tree view options
     ui->treeView->setModel(mp_sfModel.data());
