@@ -275,7 +275,8 @@ bool QMutableVariantDataInfo::editableValues() const
     return false;
 }
 
-void QMutableVariantDataInfo::setContainerKey(const QVariant& oldKey, const QVariant& newKey)
+void QMutableVariantDataInfo::setContainerKey(
+        const QVariant& oldKey, const QVariant& newKey)
 {
     Q_ASSERT(editableKeys());
 
@@ -304,7 +305,8 @@ void QMutableVariantDataInfo::setContainerKey(const QVariant& oldKey, const QVar
     }
 }
 
-void QMutableVariantDataInfo::setContainerValue(const QVariant& key, const QVariant& value)
+void QMutableVariantDataInfo::setContainerValue(
+        const QVariant& key, const QVariant& value)
 {
     Q_ASSERT(editableValues());
 
