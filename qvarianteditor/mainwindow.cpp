@@ -24,8 +24,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     bindMenuActions();
     connectMenu();
-    connect(ui->tabWidget, SIGNAL(currentChanged(int)),
-            this, SLOT(updateWithTab(int)));
+    connect(ui->tabWidget, &QTabWidget::currentChanged,
+            this, &MainWindow::updateWithTab);
 }
 
 MainWindow::~MainWindow()
@@ -36,20 +36,25 @@ MainWindow::~MainWindow()
 void MainWindow::connectMenu()
 {
     // signals to actions
-    connect(ui->actionNew, SIGNAL(triggered()),
-            this, SLOT(new_()));
-    connect(ui->actionOpen, SIGNAL(triggered()),
-            this, SLOT(open()));
-    connect(ui->actionSave, SIGNAL(triggered()),
-            this, SLOT(save()));
-    connect(ui->actionSaveAs, SIGNAL(triggered()),
-            this, SLOT(saveAs()));
-    connect(ui->actionClose, SIGNAL(triggered()),
-            this, SLOT(close()));
-    connect(ui->actionQuit, SIGNAL(triggered()),
-            this, SLOT(quit()));
-    connect(ui->actionAbout, SIGNAL(triggered()),
-            this, SLOT(about()));
+    connect(ui->actionNew, &QAction::triggered,
+            this, &MainWindow::new_);
+    connect(ui->actionOpen, &QAction::triggered,
+            this, &MainWindow::open);
+    connect(ui->actionSave, &QAction::triggered,
+            this, &MainWindow::save);
+    connect(ui->actionSaveAs, &QAction::triggered,
+            this, &MainWindow::saveAs);
+    connect(ui->actionClose, &QAction::triggered,
+            this, &MainWindow::close);
+    connect(ui->actionQuit, &QAction::triggered,
+            this, &MainWindow::quit);
+    connect(ui->actionAbout, &QAction::triggered,
+            this, &MainWindow::about);
+
+    connect(ui->actionShowOptionSidebar, &QAction::triggered,
+            this, &MainWindow::actionShowSidebar);
+    connect(ui->actionShowSearchBox, &QAction::triggered,
+            this, &MainWindow::actionShowSidebar);
 }
 
 void MainWindow::bindMenuActions()
@@ -267,12 +272,12 @@ void MainWindow::tabModified()
 void MainWindow::connectTab(QTreeVariantWidget* tvw)
 {
     // widget name & state
-    connect(tvw, SIGNAL(windowTitleChanged(QString)),
-            this, SLOT(tabNameChanged()));
-    connect(tvw, SIGNAL(widgetModified(bool)),
-            this, SLOT(tabModified()));
-    connect(tvw, SIGNAL(widgetModified(bool)),
-            this, SLOT(setWindowModified(bool)));
+    connect(tvw, &QTreeVariantWidget::windowTitleChanged,
+            this, &MainWindow::tabNameChanged);
+    connect(tvw, &QTreeVariantWidget::widgetModified,
+            this, &MainWindow::tabModified);
+    connect(tvw, &QTreeVariantWidget::widgetModified,
+            this, &MainWindow::setWindowModified);
 
     // search
     connect(ui->actionShowSearchBox, &QAction::toggled,
@@ -283,6 +288,20 @@ void MainWindow::connectTab(QTreeVariantWidget* tvw)
     connect(ui->actionShowOptionSidebar, &QAction::toggled,
             tvw, &QTreeVariantWidget::setOptionsVisible);
     tvw->setOptionsVisible(ui->actionShowOptionSidebar->isChecked());
+}
+
+//------------------------------------------------------------------------------
+
+void MainWindow::actionShowSidebar()
+{
+    QAction* action = qobject_cast<QAction*>(sender());
+    if (action && action->isChecked()) {
+        // hide all others sidebar
+        if (ui->actionShowOptionSidebar != action)
+            ui->actionShowOptionSidebar->setChecked(false);
+        if (ui->actionShowSearchBox != action)
+            ui->actionShowSearchBox->setChecked(false);
+    }
 }
 
 //------------------------------------------------------------------------------

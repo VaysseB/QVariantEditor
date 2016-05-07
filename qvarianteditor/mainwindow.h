@@ -41,6 +41,8 @@ private slots:
     void openRecentFile(); // use sender
     void clearRecentFiles();
 
+    void actionShowSidebar();
+
 private:
     void connectMenu();
     void bindMenuActions();
