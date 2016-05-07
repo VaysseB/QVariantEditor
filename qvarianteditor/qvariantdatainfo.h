@@ -2,12 +2,13 @@
 #define QVARIANTDATAINFO_H
 
 #include <QVariant>
+#include <QCoreApplication>
 
 
 class QVariantDataInfo
 {
 public:
-    QVariantDataInfo(const QVariant& data);
+    explicit QVariantDataInfo(const QVariant& data);
 
     bool isValid() const;
 
@@ -19,23 +20,42 @@ public:
 
     QString displayText(int depth = 3) const;
 
-private:
+protected:
     const QVariant& m_cdata;
 };
 
 class QMutableVariantDataInfo : public QVariantDataInfo
 {
+    Q_DECLARE_TR_FUNCTIONS(QMutableVariantDataInfo)
+
 public:
-    QMutableVariantDataInfo(QVariant& data);
+    explicit QMutableVariantDataInfo(QVariant& data);
+    explicit QMutableVariantDataInfo(const QVariant& data);
 
     bool editableKeys() const;
     bool editableValues() const;
 
+    bool isNewKeyInsertable() const;
+    /**
+     * @brief Insert a new key in the container, if possible before the given
+     * key. If the given key is invalid, the value should be append.
+     * @param beforeKey the key to insert before.
+     * @param value the value to insert
+     * @return The created key
+     */
+    QVariant tryInsertNewKey(const QVariant& beforeKey, const QVariant& value);
+
     void setContainerKey(const QVariant& oldKey, const QVariant& newKey);
     void setContainerValue(const QVariant& key, const QVariant& value);
 
-private:
+    inline bool isConst() const { return &m_mutdata == &m_dummy; }
+
+protected:
+    const QVariant& constData() const;
+
+protected:
     QVariant& m_mutdata;
+    QVariant m_dummy;
 };
 
 

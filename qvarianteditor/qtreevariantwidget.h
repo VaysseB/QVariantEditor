@@ -4,6 +4,7 @@
 #include <QVariant>
 #include <QSharedPointer>
 #include <QWidget>
+#include <QMenu>
 
 #include "qvariantmodel.h"
 
@@ -40,6 +41,12 @@ private slots:
 
     void modelDataChanged();
 
+    void showEditMenu(const QPoint& pos);
+    void updateEditMenu(const QVariant &datas);
+
+    void insertNew();
+    void insertBeforeCurrent();
+    void insertAfterCurrent();
 
 private:
     Ui::QTreeVariantWidget *ui;
@@ -47,6 +54,8 @@ private:
     QString m_filename;
 
     QSharedPointer<QVariantModel> mp_model;
+
+    QSharedPointer<QMenu> mp_editMenu;
 };
 
 #endif // QTREEVARIANTWIDGET_H

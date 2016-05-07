@@ -236,7 +236,7 @@ QString QVariantDataInfo::displayText(int depth) const
     return repr;
 }
 
-//------------------------------------------------------------------------------
+//==============================================================================
 
 QMutableVariantDataInfo::QMutableVariantDataInfo(QVariant &data) :
     QVariantDataInfo(data),
@@ -244,10 +244,21 @@ QMutableVariantDataInfo::QMutableVariantDataInfo(QVariant &data) :
 {
 }
 
+QMutableVariantDataInfo::QMutableVariantDataInfo(const QVariant &data) :
+    QVariantDataInfo(data),
+    m_mutdata(m_dummy)
+{
+}
+
+const QVariant& QMutableVariantDataInfo::constData() const
+{
+    return isConst() ? m_cdata : m_mutdata;
+}
+
 bool QMutableVariantDataInfo::editableKeys() const
 {
     // we handle only a reduced number
-    switch(m_mutdata.type())
+    switch(constData().type())
     {
     case QVariant::Map:
     case QVariant::Hash:
@@ -262,7 +273,7 @@ bool QMutableVariantDataInfo::editableKeys() const
 bool QMutableVariantDataInfo::editableValues() const
 {
     // we handle only a reduced number
-    switch(m_mutdata.type())
+    switch(constData().type())
     {
     case QVariant::Map:
     case QVariant::Hash:
@@ -278,6 +289,7 @@ bool QMutableVariantDataInfo::editableValues() const
 void QMutableVariantDataInfo::setContainerKey(
         const QVariant& oldKey, const QVariant& newKey)
 {
+    Q_ASSERT(isConst() == false);
     Q_ASSERT(editableKeys());
 
     switch(m_mutdata.type())
@@ -308,6 +320,7 @@ void QMutableVariantDataInfo::setContainerKey(
 void QMutableVariantDataInfo::setContainerValue(
         const QVariant& key, const QVariant& value)
 {
+    Q_ASSERT(isConst() == false);
     Q_ASSERT(editableValues());
 
     switch(m_mutdata.type())
@@ -342,4 +355,86 @@ void QMutableVariantDataInfo::setContainerValue(
                m_mutdata.userType(), qPrintable(m_mutdata.typeName()));
         break;
     }
+}
+
+//------------------------------------------------------------------------------
+
+bool QMutableVariantDataInfo::isNewKeyInsertable() const
+{
+    bool insertable = false;
+
+    switch(constData().type())
+    {
+    case QVariant::Map:
+    case QVariant::Hash:
+    case QVariant::List:
+        insertable = true;
+        break;
+    default:
+        break;
+    }
+
+    return insertable;
+}
+
+QVariant QMutableVariantDataInfo::tryInsertNewKey(
+        const QVariant& beforeKey, const QVariant& value)
+{
+    Q_ASSERT(isConst() == false);
+    Q_ASSERT(isNewKeyInsertable());
+    QVariant createdKey;
+
+    switch(m_mutdata.type())
+    {
+    case QVariant::Map: {
+        QVariantMap map = m_mutdata.toMap();
+        QString name = beforeKey.toString();
+        if (name.isEmpty())
+            name = tr("key");
+        else {
+            int tries = 1;
+            QString newName = name + "1";
+            while (map.contains(newName))
+                newName = name + QString::number(tries);
+            name = newName;
+        }
+        map.insert(name, value);
+        m_mutdata = map;
+        createdKey = name;
+    }
+        break;
+    case QVariant::Hash: {
+        QVariantHash hash = m_mutdata.toHash();
+        QString name = beforeKey.toString();
+        if (name.isEmpty())
+            name = tr("key");
+        else {
+            int tries = 1;
+            QString newName = name + "1";
+            while (hash.contains(newName))
+                newName = name + QString::number(tries);
+            name = newName;
+        }
+        hash.insert(name, value);
+        m_mutdata = hash;
+        createdKey = name;
+    }
+        break;
+    case QVariant::List: {
+        QVariantList list = m_mutdata.toList();
+        int pos = beforeKey.isValid() ? beforeKey.toUInt() : 0;
+        list.insert(pos, value);
+        m_mutdata = list;
+        createdKey = pos;
+    }
+        break;
+    default:
+        qDebug("%s:%d: new key should be inserted for type %d-%s,"
+               " but implementation is missing",
+               __FILE__, __LINE__,
+               m_mutdata.userType(), qPrintable(m_mutdata.typeName()));
+        break;
+    }
+
+    return createdKey;
 }

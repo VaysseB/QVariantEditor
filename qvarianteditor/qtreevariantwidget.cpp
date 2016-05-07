@@ -4,6 +4,8 @@
 #include <QFileInfo>
 #include <QDebug>
 
+#include "qvariantdatainfo.h"
+
 
 QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     QWidget(parent),
@@ -16,6 +18,8 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     mp_model->setDynamicSort(true);
     connect(mp_model.data(), &QVariantModel::rootDatasChanged,
             this, &QTreeVariantWidget::modelDataChanged);
+    connect(mp_model.data(), &QVariantModel::rootDatasChanged,
+            this, &QTreeVariantWidget::updateEditMenu);
 
     // search field
     ui->comboFilterField->addItem(tr("All fields"));
@@ -31,6 +35,7 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     ui->comboFilterType->addItem(tr("Fixed"), QVariantModel::Fixed);
     ui->comboFilterType->setCurrentIndex(0);
 
+    // search options
     void (QComboBox::* currentIndexChangedPtr)(int)
             = &QComboBox::currentIndexChanged;
     connect(ui->comboFilterType, currentIndexChangedPtr,
@@ -52,6 +57,9 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     // tree view edit triggers
     ui->treeView->setEditTriggers(QTreeView::DoubleClicked
                                   | QTreeView::EditKeyPressed);
+    ui->treeView->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->treeView, &QTreeView::customContextMenuRequested,
+            this, &QTreeVariantWidget::showEditMenu);
 
     // tree view header options
     QHeaderView* header = ui->treeView->header();
@@ -74,7 +82,7 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 
     // init with value
     setFilename(QString());
-    modelDataChanged();
+    mp_model->setRootDatas(QVariantList());
 }
 
 QTreeVariantWidget::~QTreeVariantWidget()
@@ -199,4 +207,67 @@ void QTreeVariantWidget::modelDataChanged()
     // we noticed something changed
     setWindowModified(true);
     emit widgetModified(isWindowModified());
+}
+
+//------------------------------------------------------------------------------
+
+void QTreeVariantWidget::updateEditMenu(const QVariant& datas)
+{
+    mp_editMenu.reset(new QMenu(ui->treeView));
+
+    QMutableVariantDataInfo mutDInfo(datas);
+    if (mutDInfo.isValid() == false)
+        return;
+    else if (mutDInfo.isAtomic())
+        return;
+    else if (mutDInfo.isContainer() == false)
+        return;
+
+    if (mutDInfo.isNewKeyInsertable()) {
+        if (mutDInfo.containerKeys().isEmpty()) {
+            QAction* insertNew = mp_editMenu->addAction(tr("Insert new"));
+
+            insertNew->setIcon(QIcon::fromTheme("edit-add"));
+
+            connect(insertNew, &QAction::triggered,
+                    this, &QTreeVariantWidget::insertNew);
+        }
+        else {
+            QAction* insertBefore = mp_editMenu->addAction(tr("Insert before"));
+            QAction* insertAfter = mp_editMenu->addAction(tr("Insert after"));
+
+            insertBefore->setIcon(QIcon::fromTheme("edit-add"));
+            insertAfter->setIcon(QIcon::fromTheme("edit-add"));
+
+            connect(insertBefore, &QAction::triggered,
+                    this, &QTreeVariantWidget::insertBeforeCurrent);
+            connect(insertAfter, &QAction::triggered,
+                    this, &QTreeVariantWidget::insertAfterCurrent);
+        }
+    }
+}
+
+void QTreeVariantWidget::showEditMenu(const QPoint& pos)
+{
+    if (mp_editMenu.isNull())
+        return;
+
+    QPoint showPoint = ui->treeView->mapToGlobal(pos);
+    showPoint.ry() += ui->treeView->header()->height();
+    mp_editMenu->exec(showPoint);
+}
+
+void QTreeVariantWidget::insertNew()
+{
+
+}
+
+void QTreeVariantWidget::insertBeforeCurrent()
+{
+
+}
+
+void QTreeVariantWidget::insertAfterCurrent()
+{
+
 }
