@@ -29,6 +29,17 @@ class QVariantModel : public QAbstractItemModel
         QList<node_t*> children;
     };
 
+    enum InternalSortPolicy {
+        ForceSort,
+        DynamicSortPolicy,
+        NoSort
+    };
+
+    enum InternalSortStrategy {
+        SortNodeOnly,
+        SortNodeAndChildren
+    };
+
 public:
     enum Column {
         KeyColumn = 1,
@@ -64,6 +75,7 @@ public:
                         int role) const;
     QVariant data(const QModelIndex& index, int role) const;
     bool setData(const QModelIndex& index, const QVariant& value, int role);
+    bool insertRows(int row, int count, const QModelIndex& parent);
 
     QVariantList rootDatas() const;
     inline uint displayDepth() const { return m_depth; }
@@ -97,19 +109,20 @@ protected:
     virtual bool filterType(int type) const;
     virtual bool filterOnDisplayText(const QString& text) const;
 
+    void invalidateSubTree(QModelIndex index);
+
 private:
-    void buildTree(node_t& node,
-                   const QVariant& data,
-                   node_t* parent = nullptr,
-                   const QVariant& keyInParent = QVariant()) const;
+    void rebuildTree(node_t& node) const;
+    void freeNode(node_t& node) const;
 
     QModelIndex indexOfNode(node_t* node, int column) const;
     QModelIndex indexOfNode(node_t* node, Column col) const;
 
     void updateFilterRx(QString pattern);
 
-    void sortTree(node_t& root, bool recursive);
-    bool filterTree(node_t& root);
+    void sortTree(node_t& root, InternalSortStrategy sortStrategy);
+    bool filterTree(node_t& root, InternalSortPolicy sortPolicy);
+    bool isAcceptedNode(node_t& root) const;
 
     void dumpTree(const node_t *root,
                   const QString& prefix = QString()) const;

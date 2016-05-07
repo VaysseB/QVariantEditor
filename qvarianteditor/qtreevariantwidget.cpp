@@ -14,12 +14,12 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    updateEditMenus();
+
     // model
     mp_model->setDynamicSort(true);
     connect(mp_model.data(), &QVariantModel::rootDatasChanged,
             this, &QTreeVariantWidget::modelDataChanged);
-    connect(mp_model.data(), &QVariantModel::rootDatasChanged,
-            this, &QTreeVariantWidget::updateEditMenu);
 
     // search field
     ui->comboFilterField->addItem(tr("All fields"));
@@ -211,63 +211,70 @@ void QTreeVariantWidget::modelDataChanged()
 
 //------------------------------------------------------------------------------
 
-void QTreeVariantWidget::updateEditMenu(const QVariant& datas)
+void QTreeVariantWidget::updateEditMenus()
 {
-    mp_editMenu.reset(new QMenu(ui->treeView));
+    mp_selectionEditMenu = QPointer<QMenu>(new QMenu(ui->treeView));
+    mp_blankEditMenu = QPointer<QMenu>(new QMenu(ui->treeView));
 
-    QMutableVariantDataInfo mutDInfo(datas);
-    if (mutDInfo.isValid() == false)
-        return;
-    else if (mutDInfo.isAtomic())
-        return;
-    else if (mutDInfo.isContainer() == false)
-        return;
+    // blank menu
+    QAction* insertNew = mp_blankEditMenu->addAction(tr("Insert new"));
 
-    if (mutDInfo.isNewKeyInsertable()) {
-        if (mutDInfo.containerKeys().isEmpty()) {
-            QAction* insertNew = mp_editMenu->addAction(tr("Insert new"));
+    insertNew->setIcon(QIcon::fromTheme("edit-add"));
 
-            insertNew->setIcon(QIcon::fromTheme("edit-add"));
+    connect(insertNew, &QAction::triggered,
+            this, &QTreeVariantWidget::insertNew);
 
-            connect(insertNew, &QAction::triggered,
-                    this, &QTreeVariantWidget::insertNew);
-        }
-        else {
-            QAction* insertBefore = mp_editMenu->addAction(tr("Insert before"));
-            QAction* insertAfter = mp_editMenu->addAction(tr("Insert after"));
+    // selection menu
+    QAction* insertBefore = mp_selectionEditMenu->addAction(tr("Insert before"));
+    QAction* insertAfter = mp_selectionEditMenu->addAction(tr("Insert after"));
 
-            insertBefore->setIcon(QIcon::fromTheme("edit-add"));
-            insertAfter->setIcon(QIcon::fromTheme("edit-add"));
+    insertBefore->setIcon(QIcon::fromTheme("edit-add"));
+    insertAfter->setIcon(QIcon::fromTheme("edit-add"));
 
-            connect(insertBefore, &QAction::triggered,
-                    this, &QTreeVariantWidget::insertBeforeCurrent);
-            connect(insertAfter, &QAction::triggered,
-                    this, &QTreeVariantWidget::insertAfterCurrent);
-        }
-    }
+    connect(insertBefore, &QAction::triggered,
+            this, &QTreeVariantWidget::insertBeforeCurrent);
+    connect(insertAfter, &QAction::triggered,
+            this, &QTreeVariantWidget::insertAfterCurrent);
 }
 
 void QTreeVariantWidget::showEditMenu(const QPoint& pos)
 {
-    if (mp_editMenu.isNull())
+    QMenu* menu = nullptr;
+
+    // the user have selected something
+    if (ui->treeView->currentIndex().isValid())
+        menu = mp_selectionEditMenu.data();
+    // nothing is selected
+    else
+        menu = mp_blankEditMenu.data();
+
+    if (menu == nullptr)
         return;
 
     QPoint showPoint = ui->treeView->mapToGlobal(pos);
     showPoint.ry() += ui->treeView->header()->height();
-    mp_editMenu->exec(showPoint);
+    showPoint += QPoint(2, 2);
+    menu->exec(showPoint);
 }
 
 void QTreeVariantWidget::insertNew()
 {
-
+    bool isDataInserted = mp_model->insertRows(0, 1, QModelIndex());
+    Q_ASSERT(isDataInserted);
 }
 
 void QTreeVariantWidget::insertBeforeCurrent()
 {
-
+    QModelIndex insertIndex = ui->treeView->currentIndex();
+    bool isDataInserted = mp_model->insertRows(
+                insertIndex.row(), 1, insertIndex.parent());
+    Q_ASSERT(isDataInserted);
 }
 
 void QTreeVariantWidget::insertAfterCurrent()
 {
-
+    QModelIndex insertIndex = ui->treeView->currentIndex();
+    bool isDataInserted = mp_model->insertRows(
+                insertIndex.row()+1, 1, insertIndex.parent());
+    Q_ASSERT(isDataInserted);
 }

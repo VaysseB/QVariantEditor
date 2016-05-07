@@ -23,12 +23,18 @@ void QVariantModel::setRootDatas(const QVariantList &rootDatas)
 {
     beginResetModel();
 
-    mp_root.reset(new node_t);
-    buildTree(*mp_root, QVariant(rootDatas));
+    if (mp_root)
+        freeNode(*mp_root);
 
+    mp_root.reset(new node_t);
+    mp_root->value = rootDatas;
+    mp_root->parent = nullptr;
+    rebuildTree(*mp_root);
+
+    // filter & sort
     bool wasFiltered = !m_filterRx.pattern().isEmpty();
     if (wasFiltered)
-        filterTree(*mp_root);
+        filterTree(*mp_root, DynamicSortPolicy);
 
     endResetModel();
 
@@ -40,27 +46,48 @@ QVariantList QVariantModel::rootDatas() const
     return mp_root->value.toList();
 }
 
-void QVariantModel::buildTree(
-        node_t& node,
-        const QVariant& data,
-        node_t *parent,
-        const QVariant& keyInParent) const
+void QVariantModel::freeNode(node_t& node) const
 {
-    node.value = data;
-    node.parent = parent;
-    node.keyInParent = keyInParent;
+    while (node.children.isEmpty() == false)
+        freeNode(*node.children.takeLast());
+}
+
+void QVariantModel::rebuildTree(node_t& node) const
+{
+    // clear children if any
+    node.visibleChildren.clear();
 
     QVariantDataInfo dInfo(node.value);
 
     if (dInfo.isValid() && dInfo.isContainer()) {
         QVariantList keys = dInfo.containerKeys();
+        // resize children
         node.children.reserve(keys.count());
+        while (node.children.count() > keys.count()) {
+            freeNode(*node.children.last());
+            delete node.children.takeLast();
+        }
+        //
+        int iChild = 0;
         for (auto itkey = keys.constBegin(); itkey != keys.constEnd(); ++itkey){
             QVariant childData = dInfo.containerValue(*itkey);
-            node.children.append(new node_t);
-            buildTree(*node.children.last(), childData, &node, *itkey);
+            node_t* child = node.children.value(iChild++, nullptr);
+            if (child == nullptr) {
+                child = new node_t;
+                child->parent = &node;
+                node.children.append(child);
+            }
+            child->keyInParent = *itkey;
+            child->value = childData;
+            rebuildTree(*child);
         }
         node.visibleChildren = node.children;
+    }
+    else {
+        while (node.children.isEmpty() == false) {
+            freeNode(*node.children.last());
+            delete node.children.takeLast();
+        }
     }
 }
 
@@ -314,6 +341,38 @@ int QVariantModel::column(Column column) const
 
 //------------------------------------------------------------------------------
 
+void QVariantModel::invalidateSubTree(QModelIndex index)
+{
+    node_t* node = mp_root.data();
+    if (index.isValid())
+        node = static_cast<node_t*>(index.internalPointer());
+    Q_ASSERT(node != nullptr);
+
+    QVector<int> displayRole;
+    displayRole << Qt::DisplayRole;
+
+    // update its parents
+    while (node->parent != nullptr) {
+        Q_ASSERT(index.isValid());
+        Q_ASSERT(index.internalPointer() == node);
+
+        // change data in parent
+        QMutableVariantDataInfo mutDInfoParent(node->parent->value);
+        Q_ASSERT(mutDInfoParent.isValid());
+        Q_ASSERT(mutDInfoParent.isContainer());
+        Q_ASSERT(mutDInfoParent.editableValues());
+        mutDInfoParent.setContainerValue(node->keyInParent,
+                                         node->value);
+
+        // next parent (because dataChanged must take the node's parent)
+        node = node->parent;
+        index = index.parent();
+
+        // update parent of index
+        emit dataChanged(index, index, displayRole);
+    }
+}
+
 bool QVariantModel::setData(const QModelIndex& index,
                             const QVariant& value,
                             int role)
@@ -333,9 +392,6 @@ bool QVariantModel::setData(const QModelIndex& index,
 
     bool dataChanges = false;
 
-    QVector<int> displayRole;
-    displayRole << Qt::DisplayRole;
-
     if (index.column() == column(KeyColumn)) {
         Q_ASSERT(node->parent != nullptr);
 
@@ -352,35 +408,15 @@ bool QVariantModel::setData(const QModelIndex& index,
         mutDInfoParent.setContainerKey(oldKey, node->keyInParent);
 
         // update the node index
-        emit dataChanged(index, index, displayRole);
+        emit dataChanged(index, index, QVector<int>() << Qt::DisplayRole);
 
         // update its parents
-        node_t* parentNode = node->parent;
-        QModelIndex parentIndex = index.parent();
-        while (parentNode->parent != nullptr) {
-            Q_ASSERT(parentIndex.isValid());
-            Q_ASSERT(parentIndex.internalPointer() == parentNode);
-
-            // change data in parent
-            QMutableVariantDataInfo mutDInfoParent(parentNode->parent->value);
-            Q_ASSERT(mutDInfoParent.isValid());
-            Q_ASSERT(mutDInfoParent.isContainer());
-            Q_ASSERT(mutDInfoParent.editableValues());
-            mutDInfoParent.setContainerValue(parentNode->keyInParent,
-                                             parentNode->value);
-
-            // next parent (because dataChanged must take the node's parent)
-            parentNode = parentNode->parent;
-            parentIndex = parentIndex.parent();
-
-            // update parent of parentIndex
-            emit dataChanged(parentIndex, parentIndex, displayRole);
-        }
+        invalidateSubTree(index.parent());
 
         // the order might changed if sort
         // do begin/end move rows
         if (m_dynamicSort)
-            sortTree(*node->parent, false);
+            sortTree(*node->parent, SortNodeOnly);
 
         dataChanges = true;
     }
@@ -393,7 +429,7 @@ bool QVariantModel::setData(const QModelIndex& index,
         node->value = value;
 
         // emit the update of the row (we want to update value+type columns)
-        QVector<int> roles = QVector<int>(displayRole) << role;
+        QVector<int> roles = QVector<int>() << Qt::DisplayRole << role;
         emit dataChanged(index, index, roles); // update value column
         if (typeChanged) {
             // update type column
@@ -403,27 +439,7 @@ bool QVariantModel::setData(const QModelIndex& index,
         }
 
         // update its parents
-        node_t* parentNode = node;
-        QModelIndex parentIndex = index;
-        while (parentNode->parent != nullptr) {
-            Q_ASSERT(parentIndex.isValid());
-            Q_ASSERT(parentIndex.internalPointer() == parentNode);
-
-            // change data in parent
-            QMutableVariantDataInfo mutDInfoParent(parentNode->parent->value);
-            Q_ASSERT(mutDInfoParent.isValid());
-            Q_ASSERT(mutDInfoParent.isContainer());
-            Q_ASSERT(mutDInfoParent.editableValues());
-            mutDInfoParent.setContainerValue(parentNode->keyInParent,
-                                             parentNode->value);
-
-            // next parent (because dataChanged must take the node's parent)
-            parentNode = parentNode->parent;
-            parentIndex = parentIndex.parent();
-
-            // update parent of parentIndex
-            emit dataChanged(parentIndex, parentIndex, displayRole);
-        }
+        invalidateSubTree(index);
 
         dataChanges = true;
     }
@@ -433,6 +449,61 @@ bool QVariantModel::setData(const QModelIndex& index,
 
     return dataChanges;
 }
+
+bool QVariantModel::insertRows(int row, int count, const QModelIndex& parent)
+{
+    bool dataInserted = true;
+
+    node_t* pnode = mp_root.data();
+    if (parent.isValid())
+        pnode = static_cast<node_t*>(parent.internalPointer());
+    Q_ASSERT(pnode);
+
+    QMutableVariantDataInfo mutDInfo(pnode->value);
+    Q_ASSERT(mutDInfo.isValid());
+    Q_ASSERT(mutDInfo.isContainer());
+    Q_ASSERT(mutDInfo.isNewKeyInsertable());
+
+    int childrenCount = pnode->visibleChildren.count();
+    Q_ASSERT(row >= 0 && row <= childrenCount); // row == count when append
+    node_t* beforeNode = pnode->visibleChildren.value(row, nullptr);
+    QVariant beforeKey = beforeNode ? beforeNode->keyInParent : QVariant();
+
+    // add as much rows needed
+    while (count-- > 0)
+        mutDInfo.tryInsertNewKey(beforeKey, QVariant());
+
+    // update all the keys (because the order might have changed with the new
+    // key), rebuilding the node and all if its children
+    // but first, we remove all rows, rebuild, and re-add rows
+    beginRemoveRows(parent, 0, pnode->visibleChildren.count());
+    pnode->visibleChildren.clear();
+    endRemoveRows();
+
+    rebuildTree(*pnode);
+    filterTree(*pnode, NoSort); // filter now because row are not visible
+
+    // take temporary children that are will be visible
+    QList<node_t*> visibleChildren;
+    pnode->visibleChildren.swap(visibleChildren);
+
+    beginInsertRows(parent, 0, visibleChildren.count());
+    pnode->visibleChildren.swap(visibleChildren);
+    endInsertRows();
+
+    // now rows are visible, we can sort
+    if (m_dynamicSort)
+        sortTree(*pnode, SortNodeAndChildren);
+
+    // and update all parents
+    invalidateSubTree(parent);
+
+    // data changes
+    emit rootDatasChanged(rootDatas());
+
+    return dataInserted;
+}
+
 
 //------------------------------------------------------------------------------
 
@@ -445,10 +516,10 @@ void QVariantModel::setDynamicSort(bool enabled)
     emit dynamicSortChanged(enabled);
 
     if (rowCount() > 0)
-        sortTree(*mp_root, true);
+        sortTree(*mp_root, SortNodeAndChildren);
 }
 
-void QVariantModel::sortTree(node_t& root, bool recursive)
+void QVariantModel::sortTree(node_t& root, InternalSortStrategy sortStrategy)
 {
     QList<node_t*> newChildOrder = root.visibleChildren;
 
@@ -479,10 +550,11 @@ void QVariantModel::sortTree(node_t& root, bool recursive)
         }
     }
 
-    if (recursive && root.visibleChildren.isEmpty() == false) {
+    if (sortStrategy == SortNodeAndChildren
+            && root.visibleChildren.isEmpty() == false) {
         for (auto it = root.visibleChildren.begin();
              it != root.visibleChildren.end(); ++it) {
-            sortTree(*(*it), recursive);
+            sortTree(*(*it), sortStrategy);
         }
     }
 }
@@ -569,7 +641,7 @@ void QVariantModel::setFilterType(FilterType filterType)
 
     if (wasFiltered || nowFiltered) {
         beginResetModel();
-        filterTree(*mp_root);
+        filterTree(*mp_root, DynamicSortPolicy);
         endResetModel();
 
         dumpTree(mp_root.data());
@@ -591,7 +663,7 @@ void QVariantModel::setFilterColumns(Columns filterColumns)
 
     if (wasFiltered || nowFiltered) {
         beginResetModel();
-        filterTree(*mp_root);
+        filterTree(*mp_root, DynamicSortPolicy);
         endResetModel();
 
         dumpTree(mp_root.data());
@@ -613,7 +685,7 @@ void QVariantModel::setFilterText(const QString& filterText)
 
     if (wasFiltered || nowFiltered) {
         beginResetModel();
-        filterTree(*mp_root);
+        filterTree(*mp_root, DynamicSortPolicy);
         endResetModel();
 
         dumpTree(mp_root.data());
@@ -653,7 +725,7 @@ bool QVariantModel::filterOnDisplayText(const QString& text) const
     return isRowOk;
 }
 
-bool QVariantModel::filterTree(node_t& root)
+bool QVariantModel::filterTree(node_t& root, InternalSortPolicy sortPolicy)
 {
     bool isVisible = false;
 
@@ -661,10 +733,12 @@ bool QVariantModel::filterTree(node_t& root)
     if (m_filterRx.pattern().isEmpty()) {
         root.visibleChildren = root.children;
         foreach(node_t* node, root.visibleChildren)
-            filterTree(*node);
+            filterTree(*node, sortPolicy);
 
-        if (m_dynamicSort)
-            sortTree(root, false);
+        if (sortPolicy == ForceSort
+                || (m_dynamicSort && sortPolicy == DynamicSortPolicy)) {
+            sortTree(root, SortNodeOnly);
+        }
 
         isVisible = true;
     }
@@ -673,27 +747,37 @@ bool QVariantModel::filterTree(node_t& root)
         // check children first
         root.visibleChildren = root.children;
         foreach(node_t* node, root.visibleChildren) {
-            bool childVisible = filterTree(*node);
+            bool childVisible = filterTree(*node, sortPolicy);
             isVisible |= childVisible;
             if (childVisible == false)
                 root.visibleChildren.removeOne(node);
         }
 
-        if (m_dynamicSort)
-            sortTree(root, false);
+        if (sortPolicy == ForceSort
+                || (m_dynamicSort && sortPolicy == DynamicSortPolicy)) {
+            sortTree(root, SortNodeOnly);
+        }
 
         // if at least one children is visible, we are visible
         // otherwise, we look for ourself
-        if (isVisible == false) {
-            bool fkey = m_filterColumns & KeyColumn;
-            bool vkey = m_filterColumns & ValueColumn;
-            bool tkey = m_filterColumns & TypeColumn;
-
-            isVisible |= (fkey && filterKey(root.keyInParent));
-            isVisible |= (vkey && filterValue(root.value));
-            isVisible |= (tkey && filterType(root.value.userType()));
-        }
+        if (isVisible == false)
+            isVisible = isAcceptedNode(root);
     }
+
+    return isVisible;
+}
+
+bool QVariantModel::isAcceptedNode(node_t& root) const
+{
+    bool isVisible = false;
+
+    bool fkey = m_filterColumns & KeyColumn;
+    bool vkey = m_filterColumns & ValueColumn;
+    bool tkey = m_filterColumns & TypeColumn;
+
+    isVisible |= (fkey && filterKey(root.keyInParent));
+    isVisible |= (vkey && filterValue(root.value));
+    isVisible |= (tkey && filterType(root.value.userType()));
 
     return isVisible;
 }

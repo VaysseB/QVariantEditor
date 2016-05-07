@@ -3,6 +3,7 @@
 
 #include <QVariant>
 #include <QSharedPointer>
+#include <QPointer>
 #include <QWidget>
 #include <QMenu>
 
@@ -42,7 +43,7 @@ private slots:
     void modelDataChanged();
 
     void showEditMenu(const QPoint& pos);
-    void updateEditMenu(const QVariant &datas);
+    void updateEditMenus();
 
     void insertNew();
     void insertBeforeCurrent();
@@ -55,7 +56,8 @@ private:
 
     QSharedPointer<QVariantModel> mp_model;
 
-    QSharedPointer<QMenu> mp_editMenu;
+    QPointer<QMenu> mp_selectionEditMenu;
+    QPointer<QMenu> mp_blankEditMenu;
 };
 
 #endif // QTREEVARIANTWIDGET_H

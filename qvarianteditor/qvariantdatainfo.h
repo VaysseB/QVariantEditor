@@ -43,7 +43,7 @@ public:
      * @param value the value to insert
      * @return The created key
      */
-    QVariant tryInsertNewKey(const QVariant& beforeKey, const QVariant& value);
+    void tryInsertNewKey(const QVariant& beforeKey, const QVariant& value);
 
     void setContainerKey(const QVariant& oldKey, const QVariant& newKey);
     void setContainerValue(const QVariant& key, const QVariant& value);
@@ -61,7 +61,7 @@ protected:
 
 //==============================================================================
 
-namespace qtprivate {
+namespace QVariantDataInfoPrivate {
 
 template<typename T>
 struct index_collection_t {
@@ -116,6 +116,63 @@ struct associative_collection_t {
 
 };
 
+template<typename T>
+struct mutable_index_collection_t {
+    T& c;
+
+    mutable_index_collection_t(T& collection) : c(collection) {}
+
+    void insertNewKey(int beforeKey,
+                      const QVariant& value)
+    {
+        int key;
+        // if insert pos is not known or collection is empty
+        if (beforeKey < 0) {
+            if (c.isEmpty())
+                key = 0;
+            else
+                key = c.count();
+        }
+        else
+            key = beforeKey;
+
+        c.insert(key, value);
+    }
+
+};
+
+template<typename T>
+struct mutable_associative_collection_t {
+    T& c;
+
+    mutable_associative_collection_t(T& collection) : c(collection) {}
+
+    void insertNewKey(const QString& beforeKey,
+                      const QVariant& value)
+    {
+        QString key;
+        // if insert pos is not known or collection is empty
+        if (beforeKey.isEmpty()) {
+            if (c.isEmpty())
+                key = QMutableVariantDataInfo::tr("key");
+            else
+                key = c.keys().last();
+        }
+        else
+            key = beforeKey;
+
+        // tries to look for an not existing name
+        int tries = 1;
+        QString newName = key + "1";
+        while (c.contains(newName))
+            newName = key + QString::number(++tries);
+        key = newName;
+
+        c.insert(key, value);
+    }
+
+};
+
 
 template<typename T>
 inline index_collection_t<T> IndexCollection(const T& collection) {
@@ -127,7 +184,17 @@ inline associative_collection_t<T> AssociativeCollection(const T& collection) {
     return associative_collection_t<T>(collection);
 }
 
-} // namespace qtprivate
+template<typename T>
+inline mutable_index_collection_t<T> MutableIndexCollection(T& collection) {
+    return mutable_index_collection_t<T>(collection);
+}
+
+template<typename T>
+inline mutable_associative_collection_t<T> MutableAssociativeCollection(T& collection) {
+    return mutable_associative_collection_t<T>(collection);
+}
+
+} // namespace QVariantDataInfoPrivate
 
 
 #endif // QVARIANTDATAINFO_H

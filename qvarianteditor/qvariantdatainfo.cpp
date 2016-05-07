@@ -145,13 +145,13 @@ QList<QVariant> QVariantDataInfo::containerKeys() const
     switch(m_cdata.type())
     {
     case QVariant::List:
-        keys = qtprivate::IndexCollection(m_cdata.toList()).keys();
+        keys = QVariantDataInfoPrivate::IndexCollection(m_cdata.toList()).keys();
         break;
     case QVariant::Hash:
-        keys = qtprivate::AssociativeCollection(m_cdata.toHash()).keys();
+        keys = QVariantDataInfoPrivate::AssociativeCollection(m_cdata.toHash()).keys();
         break;
     case QVariant::Map:
-        keys = qtprivate::AssociativeCollection(m_cdata.toMap()).keys();
+        keys = QVariantDataInfoPrivate::AssociativeCollection(m_cdata.toMap()).keys();
         break;
     default:
         break;
@@ -215,17 +215,17 @@ QString QVariantDataInfo::displayText(int depth) const
         break;
     case QVariant::List:
         repr = (depth > 0)
-                ? qtprivate::IndexCollection(m_cdata.toList()).displayText(--depth)
+                ? QVariantDataInfoPrivate::IndexCollection(m_cdata.toList()).displayText(--depth)
                 : QString("[...]");
         break;
     case QVariant::Hash:
         repr = (depth > 0)
-                ? qtprivate::AssociativeCollection(m_cdata.toHash()).displayText(--depth)
+                ? QVariantDataInfoPrivate::AssociativeCollection(m_cdata.toHash()).displayText(--depth)
                 : QString("{...}");
         break;
     case QVariant::Map:
         repr = (depth > 0)
-                ? qtprivate::AssociativeCollection(m_cdata.toMap()).displayText(--depth)
+                ? QVariantDataInfoPrivate::AssociativeCollection(m_cdata.toMap()).displayText(--depth)
                 : QString("{...}");
         break;
     default:
@@ -377,55 +377,38 @@ bool QMutableVariantDataInfo::isNewKeyInsertable() const
     return insertable;
 }
 
-QVariant QMutableVariantDataInfo::tryInsertNewKey(
-        const QVariant& beforeKey, const QVariant& value)
+void QMutableVariantDataInfo::tryInsertNewKey(
+        const QVariant& beforeKey,
+        const QVariant& value)
 {
     Q_ASSERT(isConst() == false);
     Q_ASSERT(isNewKeyInsertable());
-    QVariant createdKey;
 
     switch(m_mutdata.type())
     {
     case QVariant::Map: {
         QVariantMap map = m_mutdata.toMap();
-        QString name = beforeKey.toString();
-        if (name.isEmpty())
-            name = tr("key");
-        else {
-            int tries = 1;
-            QString newName = name + "1";
-            while (map.contains(newName))
-                newName = name + QString::number(tries);
-            name = newName;
-        }
-        map.insert(name, value);
+        auto mut = QVariantDataInfoPrivate::MutableAssociativeCollection(map);
+        mut.insertNewKey(beforeKey.toString(),
+                         value);
         m_mutdata = map;
-        createdKey = name;
     }
         break;
     case QVariant::Hash: {
         QVariantHash hash = m_mutdata.toHash();
-        QString name = beforeKey.toString();
-        if (name.isEmpty())
-            name = tr("key");
-        else {
-            int tries = 1;
-            QString newName = name + "1";
-            while (hash.contains(newName))
-                newName = name + QString::number(tries);
-            name = newName;
-        }
-        hash.insert(name, value);
+        auto mut = QVariantDataInfoPrivate::MutableAssociativeCollection(hash);
+        mut.insertNewKey(beforeKey.toString(),
+                         value);
         m_mutdata = hash;
-        createdKey = name;
     }
         break;
     case QVariant::List: {
         QVariantList list = m_mutdata.toList();
-        int pos = beforeKey.isValid() ? beforeKey.toUInt() : 0;
-        list.insert(pos, value);
+        auto mut = QVariantDataInfoPrivate::MutableIndexCollection(list);
+        mut.insertNewKey(
+                    beforeKey.isValid() ? beforeKey.toInt() : -1,
+                    value);
         m_mutdata = list;
-        createdKey = pos;
     }
         break;
     default:
@@ -435,6 +418,4 @@ QVariant QMutableVariantDataInfo::tryInsertNewKey(
                m_mutdata.userType(), qPrintable(m_mutdata.typeName()));
         break;
     }
-
-    return createdKey;
 }
