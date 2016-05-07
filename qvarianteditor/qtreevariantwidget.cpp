@@ -31,7 +31,8 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     ui->comboFilterType->addItem(tr("Fixed"), QVariantModel::Fixed);
     ui->comboFilterType->setCurrentIndex(0);
 
-    void (QComboBox::* currentIndexChangedPtr)(int) = &QComboBox::currentIndexChanged;
+    void (QComboBox::* currentIndexChangedPtr)(int)
+            = &QComboBox::currentIndexChanged;
     connect(ui->comboFilterType, currentIndexChangedPtr,
             this, &QTreeVariantWidget::searchTypeChanged);
     connect(ui->comboFilterField, currentIndexChangedPtr,
@@ -65,11 +66,9 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     header->setMinimumSectionSize(40);
     header->setDefaultSectionSize(120);
 
-    // connect search
+    // connect search + options
     connect(ui->lineSearch, &QLineEdit::textChanged,
             mp_model.data(), &QVariantModel::setFilterText);
-
-    // connect options
     connect(ui->sliderDepth, &QSlider::valueChanged,
             mp_model.data(), &QVariantModel::setDisplayDepth);
 

@@ -66,7 +66,7 @@ void QVariantModel::buildTree(
 
 void QVariantModel::setDisplayDepth(uint depth)
 {
-    if (m_depth != depth)
+    if (m_depth == depth)
         return;
 
     m_depth = depth;
