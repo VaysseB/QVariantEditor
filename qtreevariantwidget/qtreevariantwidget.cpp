@@ -227,14 +227,18 @@ void QTreeVariantWidget::updateEditMenus()
     // selection menu
     QAction* insertBefore = mp_selectionEditMenu->addAction(tr("Insert before"));
     QAction* insertAfter = mp_selectionEditMenu->addAction(tr("Insert after"));
+    QAction* remove = mp_selectionEditMenu->addAction(tr("Remove"));
 
     insertBefore->setIcon(QIcon::fromTheme("list-add"));
     insertAfter->setIcon(QIcon::fromTheme("list-add"));
+    remove->setIcon(QIcon::fromTheme("list-remove"));
 
     connect(insertBefore, &QAction::triggered,
             this, &QTreeVariantWidget::insertBeforeCurrent);
     connect(insertAfter, &QAction::triggered,
             this, &QTreeVariantWidget::insertAfterCurrent);
+    connect(remove, &QAction::triggered,
+            this, &QTreeVariantWidget::removeCurrent);
 }
 
 void QTreeVariantWidget::showEditMenu(const QPoint& pos)
@@ -277,4 +281,12 @@ void QTreeVariantWidget::insertAfterCurrent()
     bool isDataInserted = mp_model->insertRows(
                 insertIndex.row()+1, 1, insertIndex.parent());
     Q_ASSERT(isDataInserted);
+}
+
+void QTreeVariantWidget::removeCurrent()
+{
+    QModelIndex removeIndex = ui->treeView->currentIndex();
+    bool isDataRemoved = mp_model->removeRows(
+                removeIndex.row(), 1, removeIndex.parent());
+    Q_ASSERT(isDataRemoved);
 }

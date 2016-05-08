@@ -452,6 +452,8 @@ bool QVariantModel::setData(const QModelIndex& index,
 
 bool QVariantModel::insertRows(int row, int count, const QModelIndex& parent)
 {
+    Q_ASSERT(row >= 0 && count >= 0 && row+count <= rowCount(parent)+1);
+
     bool dataInserted = true;
 
     node_t* pnode = mp_root.data();
@@ -466,12 +468,13 @@ bool QVariantModel::insertRows(int row, int count, const QModelIndex& parent)
 
     int childrenCount = pnode->visibleChildren.count();
     Q_ASSERT(row >= 0 && row <= childrenCount); // row == count when append
-    node_t* beforeNode = pnode->visibleChildren.value(row, nullptr);
-    QVariant beforeKey = beforeNode ? beforeNode->keyInParent : QVariant();
 
     // add as much rows needed
-    while (count-- > 0)
+    while (count-- > 0) {
+        node_t* beforeNode = pnode->visibleChildren.value(row, nullptr);
+        QVariant beforeKey = beforeNode ? beforeNode->keyInParent : QVariant();
         mutDInfo.tryInsertNewKey(beforeKey, QVariant());
+    }
 
     // update all the keys (because the order might have changed with the new
     // key), rebuilding the node and all if its children
@@ -502,6 +505,63 @@ bool QVariantModel::insertRows(int row, int count, const QModelIndex& parent)
     emit rootDatasChanged(rootDatas());
 
     return dataInserted;
+}
+
+bool QVariantModel::removeRows(int row, int count, const QModelIndex& parent)
+{
+    Q_ASSERT(row >= 0 && count >= 0 && row+count <= rowCount(parent));
+
+    bool dataRemoved = true;
+
+    node_t* pnode = mp_root.data();
+    if (parent.isValid())
+        pnode = static_cast<node_t*>(parent.internalPointer());
+    Q_ASSERT(pnode);
+
+    QMutableVariantDataInfo mutDInfo(pnode->value);
+    Q_ASSERT(mutDInfo.isValid());
+    Q_ASSERT(mutDInfo.isContainer());
+    Q_ASSERT(mutDInfo.isKeyRemovable());
+
+    int childrenCount = pnode->visibleChildren.count();
+    Q_ASSERT(row >= 0 && row+count <= childrenCount); // row == count when append
+
+    // remove as much rows asked
+    while (count-- > 0) {
+        node_t* node = pnode->visibleChildren.value(row+count, nullptr);
+        Q_ASSERT(node);
+        mutDInfo.removeKey(node->keyInParent);
+    }
+
+    // update all the keys (because the order might have changed after remove),
+    // rebuilding the node and all if its children
+    // but first, we remove all rows, rebuild, and re-add rows
+    beginRemoveRows(parent, 0, pnode->visibleChildren.count());
+    pnode->visibleChildren.clear();
+    endRemoveRows();
+
+    rebuildTree(*pnode);
+    filterTree(*pnode, NoSort); // filter now because row are not visible
+
+    // take temporary children that are will be visible
+    QList<node_t*> visibleChildren;
+    pnode->visibleChildren.swap(visibleChildren);
+
+    beginInsertRows(parent, 0, visibleChildren.count());
+    pnode->visibleChildren.swap(visibleChildren);
+    endInsertRows();
+
+    // now rows are visible, we can sort
+    if (m_dynamicSort)
+        sortTree(*pnode, SortNodeAndChildren);
+
+    // and update all parents
+    invalidateSubTree(parent);
+
+    // data changes
+    emit rootDatasChanged(rootDatas());
+
+    return dataRemoved;
 }
 
 

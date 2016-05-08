@@ -175,10 +175,27 @@ public:
      * Be warn that keys order might not be kept after new key is inserted.
      * @param beforeKey the key to insert before
      * @param value the data to insert
-     * @return the newly created key
      * @see isNewKeyInsertable
      */
     void tryInsertNewKey(const QVariant& beforeKey, const QVariant& value);
+
+
+    /**
+     * @brief Test if a key can be removed.
+     * The data must be a container.
+     * @return True if keys are removable
+     * @see removeKey
+     */
+    bool isKeyRemovable() const;
+    /**
+     * @brief Remove a key from the container
+     * The data must be a container, keys must be removable, and the key must
+     * exists in the container.
+     * Be warn that keys order might not be kept after key is removed.
+     * @param key the key to remove
+     * @see isKeyRemovable
+     */
+    void removeKey(const QVariant& key);
 
 
     /**
@@ -283,6 +300,11 @@ struct mutable_index_collection_t {
         c.insert(key, value);
     }
 
+    void removeKey(int key)
+    {
+        c.removeAt(key);
+    }
+
 };
 
 template<typename T>
@@ -313,6 +335,11 @@ struct mutable_associative_collection_t {
         key = newName;
 
         c.insert(key, value);
+    }
+
+    void removeKey(const QString& key)
+    {
+        c.remove(key);
     }
 
 };

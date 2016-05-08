@@ -48,6 +48,7 @@ private slots:
     void insertNew();
     void insertBeforeCurrent();
     void insertAfterCurrent();
+    void removeCurrent();
 
 private:
     Ui::QTreeVariantWidget *ui;

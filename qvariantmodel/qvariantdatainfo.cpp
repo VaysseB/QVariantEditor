@@ -413,3 +413,63 @@ void QMutableVariantDataInfo::tryInsertNewKey(
         break;
     }
 }
+
+//------------------------------------------------------------------------------
+
+bool QMutableVariantDataInfo::isKeyRemovable() const
+{
+    bool removable = false;
+
+    switch(m_cdata.type())
+    {
+    case QVariant::Map:
+    case QVariant::Hash:
+    case QVariant::List:
+        removable = true;
+        break;
+    default:
+        break;
+    }
+
+    return removable;
+}
+
+void QMutableVariantDataInfo::removeKey(const QVariant &key)
+{
+    Q_ASSERT(isConst() == false);
+    Q_ASSERT(isKeyRemovable());
+
+    switch(m_mutdata.type())
+    {
+    case QVariant::Map: {
+        QVariantMap map = m_mutdata.toMap();
+        Q_ASSERT(map.contains(key.toString()));
+        auto mut = QtPrivate::VariantDataInfo::MutableAssociativeCollection(map);
+        mut.removeKey(key.toString());
+        m_mutdata = map;
+    }
+        break;
+    case QVariant::Hash: {
+        QVariantHash hash = m_mutdata.toHash();
+        Q_ASSERT(hash.contains(key.toString()));
+        auto mut = QtPrivate::VariantDataInfo::MutableAssociativeCollection(hash);
+        mut.removeKey(key.toString());
+        m_mutdata = hash;
+    }
+        break;
+    case QVariant::List: {
+        QVariantList list = m_mutdata.toList();
+        Q_ASSERT(key.toInt() >= 0 && key.toInt() < list.count());
+        auto mut = QtPrivate::VariantDataInfo::MutableIndexCollection(list);
+        mut.removeKey(key.toInt());
+        m_mutdata = list;
+    }
+        break;
+    default:
+        qDebug("%s:%d: new key should be inserted for type %d-%s,"
+               " but implementation is missing",
+               __FILE__, __LINE__,
+               m_mutdata.userType(), qPrintable(m_mutdata.typeName()));
+        break;
+    }
+}
