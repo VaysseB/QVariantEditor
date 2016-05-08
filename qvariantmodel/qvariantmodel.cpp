@@ -59,7 +59,7 @@ void QVariantModel::rebuildTree(node_t& node) const
 
     QVariantDataInfo dInfo(node.value);
 
-    if (dInfo.isValid() && dInfo.isContainer()) {
+    if (dInfo.isContainer()) {
         QVariantList keys = dInfo.containerKeys();
         // resize children
         node.children.reserve(keys.count());
@@ -205,10 +205,10 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
     node_t* node = static_cast<node_t*>(index.internalPointer());
     Q_ASSERT(node);
 
-    QMutableVariantDataInfo mutDInfo(node->value);
-    if (mutDInfo.isValid() == false)
+    if (node->value.isValid() == false)
         return flags;
 
+    QMutableVariantDataInfo mutDInfo(node->value);
     if (index.column() == column(KeyColumn)) {
         // key should be atomic
         QVariantDataInfo dInfoKey(node->keyInParent);
@@ -219,7 +219,6 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
 
             // editable only if the direct parent can update keys
             QMutableVariantDataInfo mutDInfoDirectParent(node->parent->value);
-            Q_ASSERT(mutDInfoDirectParent.isValid());
             Q_ASSERT(mutDInfoDirectParent.isContainer());
             parentUpdatable = mutDInfoDirectParent.editableKeys();
 
@@ -232,7 +231,6 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
             // (from the node parent)
             while (node->parent != nullptr && parentUpdatable) {
                 QMutableVariantDataInfo mutDInfoParent(node->parent->value);
-                Q_ASSERT(mutDInfoParent.isValid());
                 Q_ASSERT(mutDInfoParent.isContainer());
                 parentUpdatable = mutDInfoParent.editableValues();
                 node = node->parent;
@@ -253,7 +251,6 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
             bool parentUpdatable = true;
             while (node->parent != nullptr && parentUpdatable) {
                 QMutableVariantDataInfo mutDInfoParent(node->parent->value);
-                Q_ASSERT(mutDInfoParent.isValid());
                 Q_ASSERT(mutDInfoParent.isContainer());
                 parentUpdatable = mutDInfoParent.editableValues();
                 node = node->parent;
@@ -358,7 +355,6 @@ void QVariantModel::invalidateSubTree(QModelIndex index)
 
         // change data in parent
         QMutableVariantDataInfo mutDInfoParent(node->parent->value);
-        Q_ASSERT(mutDInfoParent.isValid());
         Q_ASSERT(mutDInfoParent.isContainer());
         Q_ASSERT(mutDInfoParent.editableValues());
         mutDInfoParent.setContainerValue(node->keyInParent,
@@ -402,7 +398,6 @@ bool QVariantModel::setData(const QModelIndex& index,
 
         // update direct parent about node key
         QMutableVariantDataInfo mutDInfoParent(node->parent->value);
-        Q_ASSERT(mutDInfoParent.isValid());
         Q_ASSERT(mutDInfoParent.isContainer());
         Q_ASSERT(mutDInfoParent.editableKeys());
         mutDInfoParent.setContainerKey(oldKey, node->keyInParent);
@@ -452,8 +447,7 @@ bool QVariantModel::setData(const QModelIndex& index,
 
         // update the value and the type, as simple as this
         QVariantDataInfo dInfo(node->value);
-        Q_ASSERT(dInfo.isValid());
-        node->value = dInfo.tryConvertTo(value.type(), value.userType());
+        node->value = dInfo.tryConvert(value.type(), value.userType());
 
         // emit the update of the row (we want to update value+type columns)
         QVector<int> roles = QVector<int>() << Qt::DisplayRole << role;
@@ -489,7 +483,6 @@ bool QVariantModel::insertRows(int row, int count, const QModelIndex& parent)
     Q_ASSERT(pnode);
 
     QMutableVariantDataInfo mutDInfo(pnode->value);
-    Q_ASSERT(mutDInfo.isValid());
     Q_ASSERT(mutDInfo.isContainer());
     Q_ASSERT(mutDInfo.isNewKeyInsertable());
 
@@ -546,7 +539,6 @@ bool QVariantModel::removeRows(int row, int count, const QModelIndex& parent)
     Q_ASSERT(pnode);
 
     QMutableVariantDataInfo mutDInfo(pnode->value);
-    Q_ASSERT(mutDInfo.isValid());
     Q_ASSERT(mutDInfo.isContainer());
     Q_ASSERT(mutDInfo.isKeyRemovable());
 

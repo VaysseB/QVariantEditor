@@ -23,12 +23,6 @@ public:
      */
     explicit QVariantDataInfo(const QVariant& data);
 
-    /**
-     * @brief Test that the QVariantDataInfo know the QVariant data type.
-     * @return true if the data type is handled
-     */
-    bool isValid() const;
-
 
     /**
      * @brief Test if the data is atomic.
