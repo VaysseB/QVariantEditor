@@ -212,14 +212,11 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
     if (index.column() == column(KeyColumn)) {
         Q_ASSERT(node->parent);
 
-        // if value is not valid, we don't know how to do it
-        if (node->value.isValid() == false)
-            return flags;
+        // if value is not valid, we still can edit the key
 
         // key should be atomic
         QVariantDataInfo dInfoKey(node->keyInParent);
         if (dInfoKey.isAtomic()) {
-
             bool parentUpdatable = true;
 
             // editable only if the direct parent can update keys

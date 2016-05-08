@@ -208,7 +208,7 @@ QVariant QVariantDataInfo::tryConvert(QVariant::Type vType,
     QVariant data(m_cdata);
     bool convertSuccess = data.convert(userType);
 
-    if (convertSuccess)
+    if (convertSuccess && data.isValid())
         return data;
 
     // we handle only a reduced number
@@ -241,8 +241,8 @@ QVariant QVariantDataInfo::tryConvert(QVariant::Type vType,
     case QVariant::List:
         data = QVariant::fromValue<>(QVariantList());
         break;
-    case QVariant::String:
-        data = QVariant::fromValue<>(QString());
+    case QVariant::String: // the string should not be null (DO NOT, NEVER)
+        data = QVariant::fromValue<>(QString(""));
         break;
     case QVariant::StringList:
         data = QVariant::fromValue<>(QStringList());
