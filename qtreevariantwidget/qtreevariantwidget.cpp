@@ -219,7 +219,7 @@ void QTreeVariantWidget::updateEditMenus()
     // blank menu
     QAction* addNew = mp_blankEditMenu->addAction(tr("Add new"));
 
-    addNew->setIcon(QIcon::fromTheme("edit-add"));
+    addNew->setIcon(QIcon::fromTheme("list-add"));
 
     connect(addNew, &QAction::triggered,
             this, &QTreeVariantWidget::insertNew);
@@ -228,8 +228,8 @@ void QTreeVariantWidget::updateEditMenus()
     QAction* insertBefore = mp_selectionEditMenu->addAction(tr("Insert before"));
     QAction* insertAfter = mp_selectionEditMenu->addAction(tr("Insert after"));
 
-    insertBefore->setIcon(QIcon::fromTheme("edit-add"));
-    insertAfter->setIcon(QIcon::fromTheme("edit-add"));
+    insertBefore->setIcon(QIcon::fromTheme("list-add"));
+    insertAfter->setIcon(QIcon::fromTheme("list-add"));
 
     connect(insertBefore, &QAction::triggered,
             this, &QTreeVariantWidget::insertBeforeCurrent);

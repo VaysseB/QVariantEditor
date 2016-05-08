@@ -3,6 +3,6 @@ TEMPLATE = subdirs
 SUBDIRS += \
     qvariantmodel \
     qtreevariantwidget \
-    qvarianteditor
+    main
 
 CONFIG += ordered

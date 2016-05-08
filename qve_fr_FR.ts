@@ -2,6 +2,94 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="fr_FR" sourcelanguage="en_GB">
 <context>
+    <name>MainWindow</name>
+    <message>
+        <location filename="main/mainwindow.cpp" line="83"/>
+        <source>QVariant file explorer and editor.</source>
+        <translation>Explorateur et éditeur de fichier de QVariant.</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="84"/>
+        <source>Version: </source>
+        <translation>Version: </translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="84"/>
+        <source>, Qt </source>
+        <translation>, Qt </translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="86"/>
+        <source>Author(s): </source>
+        <translation>Auteur(s): </translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="88"/>
+        <source>QVariantEditor</source>
+        <translation>QVariantEditor</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="104"/>
+        <source>Exit</source>
+        <translation>Fermeture</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="105"/>
+        <source>Some file are not saved, quit anyway ?</source>
+        <translation>Certains fichiers ne sont pas sauvegardés, quitter ?</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="144"/>
+        <source>Open file</source>
+        <translation>Ouvrir un fichier</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="155"/>
+        <source>Loading %1</source>
+        <translation>Chargement de %1</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="161"/>
+        <source>File loaded %1</source>
+        <translation>Fichier chargé %1</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="194"/>
+        <source>Save file</source>
+        <translation>Enregistrer le fichier</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="201"/>
+        <source>Saving %1</source>
+        <translation>Enregistrement de %1</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="207"/>
+        <source>File saved %1</source>
+        <translation>Fichier enregistré %1</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="258"/>
+        <source>Close</source>
+        <translation>Fermeture</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="259"/>
+        <source>Some changes are not saved, close anyway ?</source>
+        <translation>Certaines modifications ne sont pas sauvegardées, quitter ?</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="350"/>
+        <source>Clear recent files</source>
+        <translation>Vider la liste des fichiers récents</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.cpp" line="384"/>
+        <source>&amp;%1 %2</source>
+        <translation>&amp;%1 %2</translation>
+    </message>
+</context>
+<context>
     <name>QMutableVariantDataInfo</name>
     <message>
         <location filename="qvariantmodel/qvariantdatainfo.h" line="301"/>
@@ -110,6 +198,64 @@
         <location filename="qvariantmodel/qvariantmodel.cpp" line="286"/>
         <source>Data type</source>
         <translation>Type de données</translation>
+    </message>
+</context>
+<context>
+    <name>mainwindow</name>
+    <message>
+        <location filename="main/mainwindow.ui" line="56"/>
+        <source>File</source>
+        <translation>Fichier</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.ui" line="71"/>
+        <source>Help</source>
+        <translation>Aide</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.ui" line="117"/>
+        <source>New</source>
+        <translation>Nouveau</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.ui" line="126"/>
+        <source>Open</source>
+        <translation>Ouvrir</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.ui" line="135"/>
+        <source>Save</source>
+        <translation>Enregistrer</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.ui" line="144"/>
+        <source>Save as</source>
+        <translation>Enregistrer sous</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.ui" line="153"/>
+        <source>Close</source>
+        <translation>Fermer</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.ui" line="162"/>
+        <source>Quit</source>
+        <translation>Quitter</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.ui" line="174"/>
+        <source>About</source>
+        <translation>À propos…</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.ui" line="189"/>
+        <source>Show option sidebar</source>
+        <translation>Afficher la barre des options</translation>
+    </message>
+    <message>
+        <location filename="main/mainwindow.ui" line="201"/>
+        <source>Show search box</source>
+        <translation>Afficher la barre de recherche</translation>
     </message>
 </context>
 </TS>
