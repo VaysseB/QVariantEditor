@@ -245,12 +245,12 @@ void QTreeVariantWidget::showEditMenu(const QPoint& pos)
 {
     QMenu* menu = nullptr;
 
-    // the user have selected something
-    if (ui->treeView->currentIndex().isValid())
-        menu = mp_selectionEditMenu.data();
     // nothing is selected
-    else
+    if (ui->treeView->selectionModel()->selection().isEmpty())
         menu = mp_blankEditMenu.data();
+    // the user have selected something
+    else
+        menu = mp_selectionEditMenu.data();
 
     if (menu == nullptr)
         return;
@@ -285,8 +285,34 @@ void QTreeVariantWidget::insertAfterCurrent()
 
 void QTreeVariantWidget::removeCurrent()
 {
-    QModelIndex removeIndex = ui->treeView->currentIndex();
-    bool isDataRemoved = mp_model->removeRows(
-                removeIndex.row(), 1, removeIndex.parent());
-    Q_ASSERT(isDataRemoved);
+    QModelIndexList removeIndexes = ui->treeView->selectionModel()
+            ->selectedIndexes();
+
+    while (removeIndexes.isEmpty() == false) {
+        QModelIndex index = removeIndexes.takeFirst();
+        if (index.isValid() == false)
+            continue;
+
+        QModelIndex parent = index.parent();
+        int firstRow = index.row();
+        int lastRow = index.row();
+
+        bool foundNext = true;
+        while (foundNext) {
+            foundNext = false;
+            auto it = removeIndexes.constBegin();
+            for (;it != removeIndexes.constEnd() && !foundNext; ++it) {
+                if (it->parent().internalId() == parent.internalId())
+                    foundNext = (it->row() == lastRow+1);
+            }
+            if (foundNext) {
+                lastRow++;
+                Q_ASSERT(removeIndexes.removeOne(*--it));
+            }
+        }
+
+        bool isDataRemoved = mp_model->removeRows(
+                    firstRow, (lastRow - firstRow + 1), parent);
+        Q_ASSERT(isDataRemoved);
+    }
 }
