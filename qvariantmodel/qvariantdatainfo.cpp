@@ -45,7 +45,9 @@
 #include <QQuaternion>
 #include <QPolygonF>
 #include <QIcon>
+#ifdef QT_WIDGET_LIB
 #include <QtWidgets/qsizepolicy.h>
+#endif
 
 #include <QDebug>
 
@@ -70,6 +72,10 @@ bool QVariantDataInfo::isAtomic() const
     case QVariant::Int:
     case QVariant::String:
     case QVariant::Double:
+    case QVariant::LongLong:
+    case QVariant::ULongLong:
+    case QVariant::Char:
+    case QVariant::ByteArray:
         v = true;
         break;
     default:
@@ -174,8 +180,25 @@ QString QVariantDataInfo::displayText(int depth) const
     case QVariant::Double:
         repr = QString::number(m_cdata.toDouble(), 'f');
         break;
+    case QVariant::LongLong:
+        repr = QString::number(m_cdata.toLongLong());
+        break;
+    case QVariant::ULongLong:
+        repr = QString::number(m_cdata.toULongLong());
+        break;
     case QVariant::String:
         repr = QString("\"%1\"").arg(m_cdata.toString());
+        break;
+    case QVariant::Char: {
+        QChar c(m_cdata.toChar());
+        if (c.isPrint())
+            repr = QString("'%1'").arg(c);
+        else
+            repr = QString("\\%1").arg(c.unicode());
+    }
+        break;
+    case QVariant::ByteArray:
+        repr = QString("0x\"%1\"").arg(QString(m_cdata.toByteArray().toHex()));
         break;
     case QVariant::List:
         repr = (depth > 0)
@@ -211,6 +234,8 @@ QVariant QVariantDataInfo::tryConvert(QVariant::Type vType,
     if (convertSuccess && data.isValid())
         return data;
 
+    bool isNullConvert = false;
+
     // we handle only a reduced number
     switch(vType)
     {
@@ -233,7 +258,7 @@ QVariant QVariantDataInfo::tryConvert(QVariant::Type vType,
         data = QVariant::fromValue<double>(0.0);
         break;
     case QVariant::Char:
-        data = QVariant::fromValue<char>(0);
+        data = QVariant::fromValue<char>('#');
         break;
     case QVariant::Map:
         data = QVariant::fromValue<>(QVariantMap());
@@ -248,19 +273,19 @@ QVariant QVariantDataInfo::tryConvert(QVariant::Type vType,
         data = QVariant::fromValue<>(QStringList());
         break;
     case QVariant::ByteArray:
-        data = QVariant::fromValue<>(QByteArray());
+        data = QVariant::fromValue<>(QByteArray("", 0));
         break;
     case QVariant::BitArray:
-        data = QVariant::fromValue<>(QBitArray());
+        data = QVariant::fromValue<>(QBitArray(1, false));
         break;
     case QVariant::Date:
-        data = QVariant::fromValue<>(QDate());
+        data = QVariant::fromValue<>(QDate::currentDate());
         break;
     case QVariant::Time:
-        data = QVariant::fromValue<>(QTime());
+        data = QVariant::fromValue<>(QTime::currentTime());
         break;
     case QVariant::DateTime:
-        data = QVariant::fromValue<>(QDateTime());
+        data = QVariant::fromValue<>(QDateTime::currentDateTime());
         break;
     case QVariant::Url:
         data = QVariant::fromValue<>(QUrl());
@@ -269,88 +294,101 @@ QVariant QVariantDataInfo::tryConvert(QVariant::Type vType,
         data = QVariant::fromValue<>(QLocale());
         break;
     case QVariant::Rect:
-        data = QVariant::fromValue<>(QRect());
+        data = QVariant::fromValue<>(QRect(0, 0, 10, 10));
         break;
     case QVariant::RectF:
-        data = QVariant::fromValue<>(QRectF());
+        data = QVariant::fromValue<>(QRectF(0., 0., 10., 10.));
         break;
     case QVariant::Size:
-        data = QVariant::fromValue<>(QSize());
+        data = QVariant::fromValue<>(QSize(10, 10));
         break;
     case QVariant::SizeF:
-        data = QVariant::fromValue<>(QSizeF());
+        data = QVariant::fromValue<>(QSizeF(10., 10.));
         break;
     case QVariant::Line:
-        data = QVariant::fromValue<>(QLine());
+        data = QVariant::fromValue<>(QLine(0, 0, 10, 10));
         break;
     case QVariant::LineF:
-        data = QVariant::fromValue<>(QLineF());
+        data = QVariant::fromValue<>(QLineF(0., 0., 10., 10.));
         break;
     case QVariant::Point:
-        data = QVariant::fromValue<>(QPoint());
+        data = QVariant::fromValue<>(QPoint(1, 1));
         break;
     case QVariant::PointF:
-        data = QVariant::fromValue<>(QPointF());
+        data = QVariant::fromValue<>(QPointF(1., 1.));
         break;
     case QVariant::RegExp:
-        data = QVariant::fromValue<>(QRegExp());
+        data = QVariant::fromValue<>(QRegExp("^Qt$"));
         break;
     case QVariant::RegularExpression:
-        data = QVariant::fromValue<>(QRegularExpression());
+        data = QVariant::fromValue<>(QRegularExpression("^Qt$"));
         break;
     case QVariant::Hash:
         data = QVariant::fromValue<>(QVariantHash());
         break;
     case QVariant::EasingCurve:
         data = QVariant::fromValue<>(QEasingCurve());
+        isNullConvert = true;
         break;
     case QVariant::Uuid:
         data = QVariant::fromValue<>(QUuid());
+        isNullConvert = true;
         break;
     case QVariant::ModelIndex:
         data = QVariant::fromValue<>(QModelIndex());
+        isNullConvert = true;
         break;
     case QVariant::Font:
         data = QVariant::fromValue<>(QFont());
+        isNullConvert = true;
         break;
     case QVariant::Pixmap:
         data = QVariant::fromValue<>(QPixmap());
+        isNullConvert = true;
         break;
     case QVariant::Brush:
         data = QVariant::fromValue<>(QBrush());
+        isNullConvert = true;
         break;
     case QVariant::Color:
-        data = QVariant::fromValue<>(QColor());
+        data = QVariant::fromValue<>(QColor(Qt::black));
         break;
     case QVariant::Palette:
         data = QVariant::fromValue<>(QPalette());
+        isNullConvert = true;
         break;
     case QVariant::Image:
         data = QVariant::fromValue<>(QImage());
+        isNullConvert = true;
         break;
     case QVariant::Polygon:
-        data = QVariant::fromValue<>(QPolygon());
+        data = QVariant::fromValue<>(QPolygon(3));
         break;
     case QVariant::Region:
-        data = QVariant::fromValue<>(QRegion());
+        data = QVariant::fromValue<>(QRegion(0, 0, 10, 10));
         break;
     case QVariant::Bitmap:
         data = QVariant::fromValue<>(QBitmap());
+        isNullConvert = true;
         break;
     case QVariant::Cursor:
-        data = QVariant::fromValue<>(QCursor());
+        data = QVariant::fromValue<>(QCursor(Qt::PointingHandCursor));
         break;
     case QVariant::KeySequence:
         data = QVariant::fromValue<>(QKeySequence());
+        isNullConvert = true;
         break;
     case QVariant::Pen:
         data = QVariant::fromValue<>(QPen());
+        isNullConvert = true;
         break;
     case QVariant::TextLength:
         data = QVariant::fromValue<>(QTextLength());
+        isNullConvert = true;
         break;
     case QVariant::TextFormat:
         data = QVariant::fromValue<>(QTextFormat());
+        isNullConvert = true;
         break;
     case QVariant::Matrix:
         data = QVariant::fromValue<>(QMatrix());
@@ -378,14 +416,26 @@ QVariant QVariantDataInfo::tryConvert(QVariant::Type vType,
         break;
     case QVariant::Icon:
         data = QVariant::fromValue<>(QIcon());
+        isNullConvert = true;
         break;
+#ifdef QSIZEPOLICY_H
     case QVariant::SizePolicy:
         data = QVariant::fromValue<>(QSizePolicy());
         break;
+#endif
     default:
     case QVariant::Invalid:
+        isNullConvert = true;
         data = QVariant();
         break;
+    }
+
+    // if developper (such as yourself), failed to build a valid value
+    if (data.isNull() && isNullConvert == false) {
+        qWarning("tryConvert(%s, %d) made an invalid value despite building"
+                 " something that is not supposed to be null",
+                 QVariant::typeToName(vType),
+                 userType);
     }
 
     return data;
