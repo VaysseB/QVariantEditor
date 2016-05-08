@@ -15,7 +15,7 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    updateEditMenus();
+    createEditMenus();
 
     // model
     mp_model->setDynamicSort(true);
@@ -215,34 +215,66 @@ void QTreeVariantWidget::modelDataChanged()
 
 //------------------------------------------------------------------------------
 
-void QTreeVariantWidget::updateEditMenus()
+void QTreeVariantWidget::createEditMenus()
 {
-    mp_selectionEditMenu = QPointer<QMenu>(new QMenu(ui->treeView));
-    mp_blankEditMenu = QPointer<QMenu>(new QMenu(ui->treeView));
+    mp_blankEditMenu.reset(new QMenu(ui->treeView));
+    mp_selEditMenu.reset(new QMenu(ui->treeView));
+    mp_selContainerEditMenu.reset(new QMenu(ui->treeView));
 
     // blank menu
-    QAction* addNew = mp_blankEditMenu->addAction(tr("Add new"));
+    {
+        QAction* addNew = mp_blankEditMenu->addAction(tr("Add new"));
 
-    addNew->setIcon(QIcon::fromTheme("list-add"));
+        addNew->setIcon(QIcon::fromTheme("list-add"));
 
-    connect(addNew, &QAction::triggered,
-            this, &QTreeVariantWidget::insertNew);
+        connect(addNew, &QAction::triggered,
+                this, &QTreeVariantWidget::insertNew);
+    }
 
     // selection menu
-    QAction* insertBefore = mp_selectionEditMenu->addAction(tr("Insert before"));
-    QAction* insertAfter = mp_selectionEditMenu->addAction(tr("Insert after"));
-    QAction* remove = mp_selectionEditMenu->addAction(tr("Remove"));
+    {
+        QAction* insertBefore = mp_selEditMenu->addAction(tr("Insert before"));
+        QAction* insertAfter = mp_selEditMenu->addAction(tr("Insert after"));
+        QAction* remove = mp_selEditMenu->addAction(tr("Remove"));
 
-    insertBefore->setIcon(QIcon::fromTheme("list-add"));
-    insertAfter->setIcon(QIcon::fromTheme("list-add"));
-    remove->setIcon(QIcon::fromTheme("list-remove"));
+        mp_selEditMenu->insertSeparator(remove);
 
-    connect(insertBefore, &QAction::triggered,
-            this, &QTreeVariantWidget::insertBeforeCurrent);
-    connect(insertAfter, &QAction::triggered,
-            this, &QTreeVariantWidget::insertAfterCurrent);
-    connect(remove, &QAction::triggered,
-            this, &QTreeVariantWidget::removeCurrent);
+        insertBefore->setIcon(QIcon::fromTheme("list-add"));
+        insertAfter->setIcon(QIcon::fromTheme("list-add"));
+        remove->setIcon(QIcon::fromTheme("list-remove"));
+
+        connect(insertBefore, &QAction::triggered,
+                this, &QTreeVariantWidget::insertBeforeCurrent);
+        connect(insertAfter, &QAction::triggered,
+                this, &QTreeVariantWidget::insertAfterCurrent);
+        connect(remove, &QAction::triggered,
+                this, &QTreeVariantWidget::removeCurrent);
+    }
+
+    // selection menu
+    {
+        QAction* insertInto = mp_selContainerEditMenu->addAction(tr("Insert into"));
+        QAction* insertBefore = mp_selContainerEditMenu->addAction(tr("Insert before"));
+        QAction* insertAfter = mp_selContainerEditMenu->addAction(tr("Insert after"));
+        QAction* remove = mp_selContainerEditMenu->addAction(tr("Remove"));
+
+        mp_selContainerEditMenu->insertSeparator(insertBefore);
+        mp_selContainerEditMenu->insertSeparator(remove);
+
+        insertInto->setIcon(QIcon::fromTheme("list-add"));
+        insertBefore->setIcon(QIcon::fromTheme("list-add"));
+        insertAfter->setIcon(QIcon::fromTheme("list-add"));
+        remove->setIcon(QIcon::fromTheme("list-remove"));
+
+        connect(insertInto, &QAction::triggered,
+                this, &QTreeVariantWidget::insertIntoCurrent);
+        connect(insertBefore, &QAction::triggered,
+                this, &QTreeVariantWidget::insertBeforeCurrent);
+        connect(insertAfter, &QAction::triggered,
+                this, &QTreeVariantWidget::insertAfterCurrent);
+        connect(remove, &QAction::triggered,
+                this, &QTreeVariantWidget::removeCurrent);
+    }
 }
 
 void QTreeVariantWidget::showEditMenu(const QPoint& pos)
@@ -253,8 +285,15 @@ void QTreeVariantWidget::showEditMenu(const QPoint& pos)
     if (ui->treeView->selectionModel()->selection().isEmpty())
         menu = mp_blankEditMenu.data();
     // the user have selected something
-    else
-        menu = mp_selectionEditMenu.data();
+    else {
+        QModelIndex posIndex = ui->treeView->currentIndex();
+
+        // if the item can not have children
+        if (mp_model->flags(posIndex) & Qt::ItemNeverHasChildren)
+            menu = mp_selEditMenu.data();
+        else
+            menu = mp_selContainerEditMenu.data();
+    }
 
     if (menu == nullptr)
         return;
@@ -269,6 +308,13 @@ void QTreeVariantWidget::insertNew()
 {
     int rowInsert = mp_model->rowCount();
     bool isDataInserted = mp_model->insertRows(rowInsert, 1, QModelIndex());
+    Q_ASSERT(isDataInserted);
+}
+
+void QTreeVariantWidget::insertIntoCurrent()
+{
+    QModelIndex insertIndex = ui->treeView->currentIndex();
+    bool isDataInserted = mp_model->insertRows(0, 1, insertIndex);
     Q_ASSERT(isDataInserted);
 }
 

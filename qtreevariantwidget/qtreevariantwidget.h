@@ -43,9 +43,10 @@ private slots:
     void modelDataChanged();
 
     void showEditMenu(const QPoint& pos);
-    void updateEditMenus();
+    void createEditMenus();
 
     void insertNew();
+    void insertIntoCurrent();
     void insertBeforeCurrent();
     void insertAfterCurrent();
     void removeCurrent();
@@ -57,8 +58,9 @@ private:
 
     QSharedPointer<QVariantModel> mp_model;
 
-    QPointer<QMenu> mp_selectionEditMenu;
-    QPointer<QMenu> mp_blankEditMenu;
+    QSharedPointer<QMenu> mp_blankEditMenu;
+    QSharedPointer<QMenu> mp_selEditMenu;
+    QSharedPointer<QMenu> mp_selContainerEditMenu;
 };
 
 #endif // QTREEVARIANTWIDGET_H

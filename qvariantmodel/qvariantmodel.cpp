@@ -206,6 +206,9 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
     Q_ASSERT(node);
 
     QMutableVariantDataInfo mutDInfo(node->value);
+    if (mutDInfo.isContainer() == false)
+        flags |= Qt::ItemNeverHasChildren;
+
     if (index.column() == column(KeyColumn)) {
         Q_ASSERT(node->parent);
 
