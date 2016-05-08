@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT = core
+QT = core gui
 
 TARGET = qvariantmodel
 TEMPLATE = lib

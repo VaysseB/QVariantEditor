@@ -1,6 +1,8 @@
 *~
 .*
 *.pro.user
+*.qbs.user
+*.qm
 
 /_save
 /_datas

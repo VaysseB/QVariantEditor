@@ -16,10 +16,12 @@ INCLUDEPATH += ../qvariantmodel
 DEPENDPATH += ../qvariantmodel
 
 SOURCES += \
-    qtreevariantwidget.cpp
+    qtreevariantwidget.cpp \
+    qtreevariantitemdelegate.cpp
 
 HEADERS += \
-    qtreevariantwidget.h
+    qtreevariantwidget.h \
+    qtreevariantitemdelegate.h
 
 FORMS += \
     qtreevariantwidget.ui

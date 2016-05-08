@@ -422,6 +422,7 @@ bool QVariantModel::setData(const QModelIndex& index,
     }
     else  if (index.column() == column(ValueColumn)) {
         Q_ASSERT(node->parent != nullptr);
+        // when change value, type might change
 
         bool typeChanged = (node->value.userType() != value.userType());
 
@@ -430,13 +431,39 @@ bool QVariantModel::setData(const QModelIndex& index,
 
         // emit the update of the row (we want to update value+type columns)
         QVector<int> roles = QVector<int>() << Qt::DisplayRole << role;
-        emit dataChanged(index, index, roles); // update value column
+
+        // update value column
+        emit dataChanged(index, index, roles);
+
+        // update type column if changed
         if (typeChanged) {
-            // update type column
-            emit dataChanged(indexOfNode(node, TypeColumn),
-                             indexOfNode(node, TypeColumn),
-                             roles);
+            QModelIndex typeIndex = indexOfNode(node, TypeColumn);
+            emit dataChanged(typeIndex, typeIndex, roles);
         }
+
+        // update its parents
+        invalidateSubTree(index);
+
+        dataChanges = true;
+    }
+    else  if (index.column() == column(TypeColumn)) {
+        Q_ASSERT(node->parent != nullptr);
+        // when change type, value change automatically
+
+        // update the value and the type, as simple as this
+        QVariantDataInfo dInfo(node->value);
+        Q_ASSERT(dInfo.isValid());
+        node->value = dInfo.tryConvertTo(value.type(), value.userType());
+
+        // emit the update of the row (we want to update value+type columns)
+        QVector<int> roles = QVector<int>() << Qt::DisplayRole << role;
+
+        // update type column
+        emit dataChanged(index, index, roles);
+
+        // update value column
+        QModelIndex valueIndex = indexOfNode(node, ValueColumn);
+        emit dataChanged(valueIndex, valueIndex, roles);
 
         // update its parents
         invalidateSubTree(index);

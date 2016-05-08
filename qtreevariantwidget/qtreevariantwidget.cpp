@@ -4,6 +4,7 @@
 #include <QFileInfo>
 #include <QDebug>
 
+#include "qtreevariantitemdelegate.h"
 #include "qvariantdatainfo.h"
 
 
@@ -60,6 +61,9 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     ui->treeView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->treeView, &QTreeView::customContextMenuRequested,
             this, &QTreeVariantWidget::showEditMenu);
+
+    // tree view delegate
+    ui->treeView->setItemDelegate(new QTreeVariantItemDelegate(this));
 
     // tree view header options
     QHeaderView* header = ui->treeView->header();

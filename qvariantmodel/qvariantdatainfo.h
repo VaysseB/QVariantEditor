@@ -76,6 +76,15 @@ public:
      */
     QString displayText(int depth = 3) const;
 
+
+    /**
+     * @brief Try to convert the inner value to the expected.
+     * @param vType The qvariant type enum to convert to
+     * @param userType The qvariant usertype to convert to
+     * @return a new value
+     */
+    QVariant tryConvert(QVariant::Type vType, int userType) const;
+
 protected:
     /**
      * @brief Read-only data.

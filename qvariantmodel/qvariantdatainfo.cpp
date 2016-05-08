@@ -1,5 +1,52 @@
 #include "qvariantdatainfo.h"
 
+#include <QString>
+#include <QStringList>
+#include <QByteArray>
+#include <QBitArray>
+#include <QDate>
+#include <QTime>
+#include <QDateTime>
+#include <QUrl>
+#include <QLocale>
+#include <QRect>
+#include <QRectF>
+#include <QSize>
+#include <QSizeF>
+#include <QLine>
+#include <QLineF>
+#include <QPoint>
+#include <QPointF>
+#include <QRegExp>
+#include <QRegularExpression>
+#include <QEasingCurve>
+#include <QUuid>
+#include <QModelIndex>
+#include <QFont>
+#include <QPixmap>
+#include <QBrush>
+#include <QColor>
+#include <QPalette>
+#include <QImage>
+#include <QPolygon>
+#include <QRegion>
+#include <QBitmap>
+#include <QCursor>
+#include <QKeySequence>
+#include <QPen>
+#include <QTextLength>
+#include <QTextFormat>
+#include <QMatrix>
+#include <QTransform>
+#include <QMatrix4x4>
+#include <QVector2D>
+#include <QVector3D>
+#include <QVector4D>
+#include <QQuaternion>
+#include <QPolygonF>
+#include <QIcon>
+#include <QtWidgets/qsizepolicy.h>
+
 #include <QDebug>
 
 
@@ -234,6 +281,197 @@ QString QVariantDataInfo::displayText(int depth) const
     }
 
     return repr;
+}
+
+//------------------------------------------------------------------------------
+
+QVariant QVariantDataInfo::tryConvert(QVariant::Type vType,
+                                      int userType) const
+{
+    QVariant data(m_cdata);
+    bool convertSuccess = data.convert(userType);
+
+    if (convertSuccess)
+        return data;
+
+    // we handle only a reduced number
+    switch(vType)
+    {
+    case QVariant::Bool:
+        data = QVariant::fromValue<bool>(false);
+        break;
+    case QVariant::Int:
+        data = QVariant::fromValue<int>(0);
+        break;
+    case QVariant::UInt:
+        data = QVariant::fromValue<unsigned int>(0);
+        break;
+    case QVariant::LongLong:
+        data = QVariant::fromValue<qlonglong>(0L);
+        break;
+    case QVariant::ULongLong:
+        data = QVariant::fromValue<qulonglong>(0UL);
+        break;
+    case QVariant::Double:
+        data = QVariant::fromValue<double>(0.0);
+        break;
+    case QVariant::Char:
+        data = QVariant::fromValue<char>(0);
+        break;
+    case QVariant::Map:
+        data = QVariant::fromValue<>(QVariantMap());
+        break;
+    case QVariant::List:
+        data = QVariant::fromValue<>(QVariantList());
+        break;
+    case QVariant::String:
+        data = QVariant::fromValue<>(QString());
+        break;
+    case QVariant::StringList:
+        data = QVariant::fromValue<>(QStringList());
+        break;
+    case QVariant::ByteArray:
+        data = QVariant::fromValue<>(QByteArray());
+        break;
+    case QVariant::BitArray:
+        data = QVariant::fromValue<>(QBitArray());
+        break;
+    case QVariant::Date:
+        data = QVariant::fromValue<>(QDate());
+        break;
+    case QVariant::Time:
+        data = QVariant::fromValue<>(QTime());
+        break;
+    case QVariant::DateTime:
+        data = QVariant::fromValue<>(QDateTime());
+        break;
+    case QVariant::Url:
+        data = QVariant::fromValue<>(QUrl());
+        break;
+    case QVariant::Locale:
+        data = QVariant::fromValue<>(QLocale());
+        break;
+    case QVariant::Rect:
+        data = QVariant::fromValue<>(QRect());
+        break;
+    case QVariant::RectF:
+        data = QVariant::fromValue<>(QRectF());
+        break;
+    case QVariant::Size:
+        data = QVariant::fromValue<>(QSize());
+        break;
+    case QVariant::SizeF:
+        data = QVariant::fromValue<>(QSizeF());
+        break;
+    case QVariant::Line:
+        data = QVariant::fromValue<>(QLine());
+        break;
+    case QVariant::LineF:
+        data = QVariant::fromValue<>(QLineF());
+        break;
+    case QVariant::Point:
+        data = QVariant::fromValue<>(QPoint());
+        break;
+    case QVariant::PointF:
+        data = QVariant::fromValue<>(QPointF());
+        break;
+    case QVariant::RegExp:
+        data = QVariant::fromValue<>(QRegExp());
+        break;
+    case QVariant::RegularExpression:
+        data = QVariant::fromValue<>(QRegularExpression());
+        break;
+    case QVariant::Hash:
+        data = QVariant::fromValue<>(QVariantHash());
+        break;
+    case QVariant::EasingCurve:
+        data = QVariant::fromValue<>(QEasingCurve());
+        break;
+    case QVariant::Uuid:
+        data = QVariant::fromValue<>(QUuid());
+        break;
+    case QVariant::ModelIndex:
+        data = QVariant::fromValue<>(QModelIndex());
+        break;
+    case QVariant::Font:
+        data = QVariant::fromValue<>(QFont());
+        break;
+    case QVariant::Pixmap:
+        data = QVariant::fromValue<>(QPixmap());
+        break;
+    case QVariant::Brush:
+        data = QVariant::fromValue<>(QBrush());
+        break;
+    case QVariant::Color:
+        data = QVariant::fromValue<>(QColor());
+        break;
+    case QVariant::Palette:
+        data = QVariant::fromValue<>(QPalette());
+        break;
+    case QVariant::Image:
+        data = QVariant::fromValue<>(QImage());
+        break;
+    case QVariant::Polygon:
+        data = QVariant::fromValue<>(QPolygon());
+        break;
+    case QVariant::Region:
+        data = QVariant::fromValue<>(QRegion());
+        break;
+    case QVariant::Bitmap:
+        data = QVariant::fromValue<>(QBitmap());
+        break;
+    case QVariant::Cursor:
+        data = QVariant::fromValue<>(QCursor());
+        break;
+    case QVariant::KeySequence:
+        data = QVariant::fromValue<>(QKeySequence());
+        break;
+    case QVariant::Pen:
+        data = QVariant::fromValue<>(QPen());
+        break;
+    case QVariant::TextLength:
+        data = QVariant::fromValue<>(QTextLength());
+        break;
+    case QVariant::TextFormat:
+        data = QVariant::fromValue<>(QTextFormat());
+        break;
+    case QVariant::Matrix:
+        data = QVariant::fromValue<>(QMatrix());
+        break;
+    case QVariant::Transform:
+        data = QVariant::fromValue<>(QTransform());
+        break;
+    case QVariant::Matrix4x4:
+        data = QVariant::fromValue<>(QMatrix4x4());
+        break;
+    case QVariant::Vector2D:
+        data = QVariant::fromValue<>(QVector2D());
+        break;
+    case QVariant::Vector3D:
+        data = QVariant::fromValue<>(QVector3D());
+        break;
+    case QVariant::Vector4D:
+        data = QVariant::fromValue<>(QVector4D());
+        break;
+    case QVariant::Quaternion:
+        data = QVariant::fromValue<>(QQuaternion());
+        break;
+    case QVariant::PolygonF:
+        data = QVariant::fromValue<>(QPolygonF());
+        break;
+    case QVariant::Icon:
+        data = QVariant::fromValue<>(QIcon());
+        break;
+    case QVariant::SizePolicy:
+        data = QVariant::fromValue<>(QSizePolicy());
+        break;
+    default:
+    case QVariant::Invalid:
+        data = QVariant();
+        break;
+    }
+
+    return data;
 }
 
 //==============================================================================
