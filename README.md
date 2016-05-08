@@ -1,33 +1,19 @@
 # QVariantEditor
 
-Edit file made of QVariant object.
+Edit variable/file made of QVariant.
 
 ## Features
 
-*   Simple navigation and edition through the graphical interface.
-*   Explore any file structure made of QVariant. Use double-click in column "Value", if it is a list or a collection (map/hash).
-*   Edit internal values by double-clicking on it. Convert value to another QVariant's type using a pre-definied list.
-*   Dump and read QVariant from any QIODevice (preferably a QFile).
-*   For developers: QVariantTree is reusable as-is, if you need a tree helper class for QVariant.
+*   Navigation and edition through tree interface.
+*   Edit multiple files.
+*   Create from scratch new files, or edit existing.
+*   Reuse: you can extract the qvariant tree widget to your application.
 
 ## Limit
 
-*   This editor is simple, it can only edit a small number of QVariant's types :
-
-```
-    QVariant::Invalid
-    QVariant::Bool
-    QVariant::UInt
-    QVariant::Int
-    QVariant::Double
-    QVariant::String
-    QVariant::List
-    QVariant::Map
-    QVariant::Hash
-```
-
 *   The root value must be a QVariantList.
-*   The code doesn't follow strictly Qt's rules.
+*   The code doesn't follow strictly Qt's rules (I try though).
+*   As the editor is build, it only supports about Qt qvariant predefined type. Any types that are declared with Q_DECLARE_METATYPE or Q_OBJECT cannot be known by the app, but with small adaptation, I can make it adaptable for your types.
 
 
 ## Project
@@ -35,4 +21,7 @@ Edit file made of QVariant object.
 *   It's a small project, which aim is to help me in my everyday work.
 *   My first goal isn't to made the ultimate editor, but if someone wants to extend it, please be free to do so.
 
+## License
 
+I included the elementary-xfce icon theme as fallback if no theme is found on the system.
+It's license in GPL.
