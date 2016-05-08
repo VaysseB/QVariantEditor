@@ -288,31 +288,53 @@ void QTreeVariantWidget::removeCurrent()
     QModelIndexList removeIndexes = ui->treeView->selectionModel()
             ->selectedIndexes();
 
-    while (removeIndexes.isEmpty() == false) {
-        QModelIndex index = removeIndexes.takeFirst();
-        if (index.isValid() == false)
-            continue;
+    QList<QModelIndex> parents;
+    QMultiMap<QModelIndex, int> rowsParent;
+    for (auto it = removeIndexes.constBegin();
+         it != removeIndexes.constEnd(); ++it) {
+        parents.append(it->parent());
+        rowsParent.insertMulti(it->parent(), it->row());
+    }
 
-        QModelIndex parent = index.parent();
-        int firstRow = index.row();
-        int lastRow = index.row();
+    std::sort(parents.begin(), parents.end(), [this]
+              (const QModelIndex& left, const QModelIndex& right) {
+        int lparentCount = 0;
+        QModelIndex lparent = left;
+        if ((lparent = lparent.parent()).isValid())
+            lparentCount++;
 
-        bool foundNext = true;
-        while (foundNext) {
-            foundNext = false;
-            auto it = removeIndexes.constBegin();
-            for (;it != removeIndexes.constEnd() && !foundNext; ++it) {
-                if (it->parent().internalId() == parent.internalId())
-                    foundNext = (it->row() == lastRow+1);
+        int rparentCount = 0;
+        QModelIndex rparent = left;
+        if ((rparent = rparent.parent()).isValid())
+            rparentCount++;
+
+        if (lparentCount != rparentCount)
+            return lparentCount < rparentCount;
+        return left.row() < right.row();
+    });
+
+    while (parents.isEmpty() == false) {
+        QModelIndex parent = parents.takeLast();
+        QList<int> rowsOfParent = rowsParent.values(parent);
+        rowsParent.remove(parent);
+
+        std::sort(rowsOfParent.begin(), rowsOfParent.end());
+
+        bool parentWasValid = parent.isValid();
+        while (rowsOfParent.isEmpty() == false
+               && parent.isValid() == parentWasValid) {
+            int lastRow = rowsOfParent.takeLast();
+            int firstRow = lastRow;
+
+            while (rowsOfParent.isEmpty() == false
+                   && rowsOfParent.last() == firstRow-1) {
+                rowsOfParent.removeLast();
+                firstRow--;
             }
-            if (foundNext) {
-                lastRow++;
-                Q_ASSERT(removeIndexes.removeOne(*--it));
-            }
+
+            bool isDataRemoved = mp_model->removeRows(
+                        firstRow, (lastRow - firstRow + 1), parent);
+            Q_ASSERT(isDataRemoved);
         }
-
-        bool isDataRemoved = mp_model->removeRows(
-                    firstRow, (lastRow - firstRow + 1), parent);
-        Q_ASSERT(isDataRemoved);
     }
 }

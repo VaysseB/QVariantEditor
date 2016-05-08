@@ -92,7 +92,7 @@
 <context>
     <name>QMutableVariantDataInfo</name>
     <message>
-        <location filename="qvariantmodel/qvariantdatainfo.h" line="301"/>
+        <location filename="qvariantmodel/qvariantdatainfo.h" line="323"/>
         <source>key</source>
         <translation>clé</translation>
     </message>
@@ -180,6 +180,11 @@
         <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="229"/>
         <source>Insert after</source>
         <translation>Insérer après</translation>
+    </message>
+    <message>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="230"/>
+        <source>Remove</source>
+        <translation>Supprimer</translation>
     </message>
 </context>
 <context>

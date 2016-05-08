@@ -646,14 +646,8 @@ bool QVariantModel::lessThan(const QVariant& left, const QVariant& right) const
     }
     // same type
     else {
-        if (ltype == QVariant::String) {
-            QString leftString = left.toString();
-            QString rightString = right.toString();
-            if (leftString.count() != rightString.count())
-                isLess = (leftString.count() < rightString.count());
-            else
-                isLess = QString::compare(leftString, rightString) < 0;
-        }
+        if (ltype == QVariant::String)
+            isLess = QString::compare(left.toString(), left.toString()) < 0;
         else if (ltype == QVariant::Bool)
             isLess = (left.toBool() < right.toBool());
         else if (ltype == QVariant::Int)
