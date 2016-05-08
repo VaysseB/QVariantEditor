@@ -145,13 +145,13 @@ QList<QVariant> QVariantDataInfo::containerKeys() const
     switch(m_cdata.type())
     {
     case QVariant::List:
-        keys = QVariantDataInfoPrivate::IndexCollection(m_cdata.toList()).keys();
+        keys = QtPrivate::VariantDataInfo::IndexCollection(m_cdata.toList()).keys();
         break;
     case QVariant::Hash:
-        keys = QVariantDataInfoPrivate::AssociativeCollection(m_cdata.toHash()).keys();
+        keys = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toHash()).keys();
         break;
     case QVariant::Map:
-        keys = QVariantDataInfoPrivate::AssociativeCollection(m_cdata.toMap()).keys();
+        keys = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toMap()).keys();
         break;
     default:
         break;
@@ -215,17 +215,17 @@ QString QVariantDataInfo::displayText(int depth) const
         break;
     case QVariant::List:
         repr = (depth > 0)
-                ? QVariantDataInfoPrivate::IndexCollection(m_cdata.toList()).displayText(--depth)
+                ? QtPrivate::VariantDataInfo::IndexCollection(m_cdata.toList()).displayText(--depth)
                 : QString("[...]");
         break;
     case QVariant::Hash:
         repr = (depth > 0)
-                ? QVariantDataInfoPrivate::AssociativeCollection(m_cdata.toHash()).displayText(--depth)
+                ? QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toHash()).displayText(--depth)
                 : QString("{...}");
         break;
     case QVariant::Map:
         repr = (depth > 0)
-                ? QVariantDataInfoPrivate::AssociativeCollection(m_cdata.toMap()).displayText(--depth)
+                ? QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toMap()).displayText(--depth)
                 : QString("{...}");
         break;
     default:
@@ -250,15 +250,10 @@ QMutableVariantDataInfo::QMutableVariantDataInfo(const QVariant &data) :
 {
 }
 
-const QVariant& QMutableVariantDataInfo::constData() const
-{
-    return isConst() ? m_cdata : m_mutdata;
-}
-
 bool QMutableVariantDataInfo::editableKeys() const
 {
     // we handle only a reduced number
-    switch(constData().type())
+    switch(m_cdata.type())
     {
     case QVariant::Map:
     case QVariant::Hash:
@@ -273,7 +268,7 @@ bool QMutableVariantDataInfo::editableKeys() const
 bool QMutableVariantDataInfo::editableValues() const
 {
     // we handle only a reduced number
-    switch(constData().type())
+    switch(m_cdata.type())
     {
     case QVariant::Map:
     case QVariant::Hash:
@@ -363,7 +358,7 @@ bool QMutableVariantDataInfo::isNewKeyInsertable() const
 {
     bool insertable = false;
 
-    switch(constData().type())
+    switch(m_cdata.type())
     {
     case QVariant::Map:
     case QVariant::Hash:
@@ -388,7 +383,7 @@ void QMutableVariantDataInfo::tryInsertNewKey(
     {
     case QVariant::Map: {
         QVariantMap map = m_mutdata.toMap();
-        auto mut = QVariantDataInfoPrivate::MutableAssociativeCollection(map);
+        auto mut = QtPrivate::VariantDataInfo::MutableAssociativeCollection(map);
         mut.insertNewKey(beforeKey.toString(),
                          value);
         m_mutdata = map;
@@ -396,7 +391,7 @@ void QMutableVariantDataInfo::tryInsertNewKey(
         break;
     case QVariant::Hash: {
         QVariantHash hash = m_mutdata.toHash();
-        auto mut = QVariantDataInfoPrivate::MutableAssociativeCollection(hash);
+        auto mut = QtPrivate::VariantDataInfo::MutableAssociativeCollection(hash);
         mut.insertNewKey(beforeKey.toString(),
                          value);
         m_mutdata = hash;
@@ -404,10 +399,9 @@ void QMutableVariantDataInfo::tryInsertNewKey(
         break;
     case QVariant::List: {
         QVariantList list = m_mutdata.toList();
-        auto mut = QVariantDataInfoPrivate::MutableIndexCollection(list);
-        mut.insertNewKey(
-                    beforeKey.isValid() ? beforeKey.toInt() : -1,
-                    value);
+        auto mut = QtPrivate::VariantDataInfo::MutableIndexCollection(list);
+        mut.insertNewKey(beforeKey.isValid() ? beforeKey.toInt() : -1,
+                         value);
         m_mutdata = list;
     }
         break;
