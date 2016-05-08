@@ -217,11 +217,11 @@ void QTreeVariantWidget::updateEditMenus()
     mp_blankEditMenu = QPointer<QMenu>(new QMenu(ui->treeView));
 
     // blank menu
-    QAction* insertNew = mp_blankEditMenu->addAction(tr("Insert new"));
+    QAction* addNew = mp_blankEditMenu->addAction(tr("Add new"));
 
-    insertNew->setIcon(QIcon::fromTheme("edit-add"));
+    addNew->setIcon(QIcon::fromTheme("edit-add"));
 
-    connect(insertNew, &QAction::triggered,
+    connect(addNew, &QAction::triggered,
             this, &QTreeVariantWidget::insertNew);
 
     // selection menu

@@ -11,20 +11,16 @@ TEMPLATE = app
 
 CONFIG += c++11
 
+INCLUDEPATH += ../qtreevariantwidget ../qvariantmodel
+DEPENDPATH += ../qtreevariantwidget ../qvariantmodel
+LIBS += -L../qtreevariantwidget -lqtreevariantwidget -L../qvariantmodel -lqvariantmodel
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
-    qtreevariantwidget.cpp \
-    qvariantmodel.cpp \
-    qvariantdatainfo.cpp
+        mainwindow.cpp
 
-HEADERS  += mainwindow.h \
-    qtreevariantwidget.h \
-    qvariantmodel.h \
-    qvariantdatainfo.h
+HEADERS += mainwindow.h
 
-FORMS    += mainwindow.ui \
-    qtreevariantwidget.ui
+FORMS += mainwindow.ui
 
 
 OTHER_FILES += \
@@ -35,7 +31,7 @@ RESOURCES += \
 
 
 TRANSLATIONS += \
-    qve_fr_FR.ts
+    ../qve_fr_FR.ts
 
 TradFile.path = $$OUT_PWD
 TradFile.files += qve_fr_FR.qm
