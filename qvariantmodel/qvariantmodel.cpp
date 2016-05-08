@@ -205,15 +205,17 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
     node_t* node = static_cast<node_t*>(index.internalPointer());
     Q_ASSERT(node);
 
-    if (node->value.isValid() == false)
-        return flags;
-
     QMutableVariantDataInfo mutDInfo(node->value);
     if (index.column() == column(KeyColumn)) {
+        Q_ASSERT(node->parent);
+
+        // if value is not valid, we don't know how to do it
+        if (node->value.isValid() == false)
+            return flags;
+
         // key should be atomic
         QVariantDataInfo dInfoKey(node->keyInParent);
         if (dInfoKey.isAtomic()) {
-            Q_ASSERT(node->parent);
 
             bool parentUpdatable = true;
 
@@ -245,6 +247,10 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
     else if (index.column() == column(ValueColumn)) {
         Q_ASSERT(node->parent);
 
+        // if value is not valid, the value cannot be edited
+        if (node->value.isValid() == false)
+            return flags;
+
         // value should be atomic
         if (mutDInfo.isAtomic()) {
             // editable only if all the parents can update values
@@ -263,6 +269,7 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
         }
     }
     else if (index.column() == column(TypeColumn)) {
+        // even if the value is not valid, we can edit the type
         flags |= Qt::ItemIsEditable;
     }
 
