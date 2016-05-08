@@ -267,7 +267,8 @@ void QTreeVariantWidget::showEditMenu(const QPoint& pos)
 
 void QTreeVariantWidget::insertNew()
 {
-    bool isDataInserted = mp_model->insertRows(0, 1, QModelIndex());
+    int rowInsert = mp_model->rowCount();
+    bool isDataInserted = mp_model->insertRows(rowInsert, 1, QModelIndex());
     Q_ASSERT(isDataInserted);
 }
 
