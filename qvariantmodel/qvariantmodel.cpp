@@ -7,29 +7,12 @@
 #include "qvariantdatainfo.h"
 
 #ifdef QT_DEBUG
-//#define QVM_DEBUG_MODEL_FUNC
-#define QVM_DEBUG_LOAD
+#define QVM_DEBUG_MODEL_FUNC
+//#define QVM_DEBUG_LOAD
+//#define QVM_DEBUG_BUILD
 //#define QVM_DEBUG_FILTER
 #endif
 
-
-#ifdef QVM_DEBUG_MODEL_FUNC
-#define qDebugModelFunc qDebug
-#else
-#define qDebugModelFunc QT_NO_QDEBUG_MACRO
-#endif
-
-#ifdef QVM_DEBUG_LOAD
-#define qDebugLoad qDebug
-#else
-#define qDebugLoad QT_NO_QDEBUG_MACRO
-#endif
-
-#ifdef QVM_DEBUG_FILTER
-#define qDebugFilter qDebug
-#else
-#define qDebugFilter QT_NO_QDEBUG_MACRO
-#endif
 
 #define DBG_NODE(root) (QString("node(key=") + QVariantDataInfo(root->keyInParent).displayText(1) + ", value=" + QVariantDataInfo(root->value).displayText(1) + ", type=" + QString::number(root->value.userType()) + "-" + root->value.typeName() + ")")
 
@@ -119,6 +102,16 @@ QString QVariantModel::keyPath(const node_t* node)
         keyStr.prepend("->").prepend(keyPath(node->parent));
     }
     return keyStr;
+}
+
+void QVariantModel::invalidateOrder(node_t* node, int start, int length)
+{
+    int iChild = 0;
+    for (auto it = node->visibleChildren.constBegin() + start;
+         it != node->visibleChildren.constEnd() && length-- > 0; ++it) {
+        node_t* child = *it;
+        child->indexInParent = iChild++;
+    }
 }
 
 //void QVariantModel::buildNode(node_t* root)
@@ -248,10 +241,12 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
     Q_ASSERT(pnode != nullptr);
     Q_ASSERT(pnode->isLoaded == false);
 
-    qDebugLoad().nospace()
+#ifdef QVM_DEBUG_LOAD
+    qDebug().nospace()
             << "fetchMore"
             << " key:" << keyPath(pnode)
             << " loader:" << ((void*)pnode->loader);
+#endif
 
     // if never asked to load
     if (pnode->loader == nullptr) {
@@ -267,10 +262,12 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
         // if too much datas, load async
         // otherwise load sync
         if (count >= (int)SizeLimitToLoadAsync) {
-            qDebugLoad().nospace()
+#ifdef QVM_DEBUG_LOAD
+            qDebug().nospace()
                     << "fetchMore"
                     << " key:" << keyPath(pnode)
                     << " start async";
+#endif
 
             // load async
             QThreadPool* thPool = QThreadPool::globalInstance();
@@ -283,20 +280,24 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
             endInsertRows();
         }
         else {
-            qDebugLoad().nospace()
+#ifdef QVM_DEBUG_LOAD
+            qDebug().nospace()
                     << "fetchMore"
                     << " key:" << keyPath(pnode)
                     << " load sync";
+#endif
 
             // load now
             pnode->loader->run();
 
             int count = pnode->loader->exclusive.createdChildren.count();
 
-            qDebugLoad().nospace()
+#ifdef QVM_DEBUG_LOAD
+            qDebug().nospace()
                     << "fetchMore"
                     << " key:" << keyPath(pnode)
                     << " done count:" << count;
+#endif
 
             // beware of this line: `isLoaded == false` supposed the hint node
             // is visible, so 1 is added to rowCount() if false
@@ -307,6 +308,7 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
             pnode->children.append(pnode->loader->exclusive.createdChildren);
             pnode->visibleChildren.append(pnode->loader->exclusive.createdChildren);
             pnode->loader->exclusive.createdChildren.clear();
+            invalidateOrder(pnode);
 
             endInsertRows();
         }
@@ -326,6 +328,7 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
                 pnode->children.append(pnode->loader->exclusive.createdChildren);
                 pnode->visibleChildren.append(pnode->loader->exclusive.createdChildren);
                 pnode->loader->exclusive.createdChildren.clear();
+                invalidateOrder(pnode, shownCount);
 
                 endInsertRows();
 
@@ -333,10 +336,12 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
                 if (pnode->loader->exclusive.isDone) {
                     pnode->isLoaded = true;
 
-                    qDebugLoad().nospace()
+#ifdef QVM_DEBUG_LOAD
+                    qDebug().nospace()
                             << "fetchMore"
                             << " key:" << keyPath(pnode)
                             << " done count:" << pnode->children.count();
+#endif
 
                     // we remove the "please wait data are loading" row
                     int count = pnode->children.count();
@@ -344,12 +349,14 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
                     setLoadingHintNode(pnode, false);
                     endRemoveRows();
                 }
+#ifdef QVM_DEBUG_LOAD
                 else {
-                    qDebugLoad().nospace()
+                    qDebug().nospace()
                             << "fetchMore"
                             << " key:" << keyPath(pnode)
                             << " state:" << pnode->children.count();
                 }
+#endif
 
                 // todo: sort & filter
             }
@@ -371,31 +378,37 @@ bool QVariantModel::canFetchMore(const QModelIndex &parent) const
         pnode = static_cast<node_t*>(parent.internalPointer());
     Q_ASSERT(pnode != nullptr);
 
-    qDebugLoad().nospace()
+#ifdef QVM_DEBUG_LOAD
+    qDebug().nospace()
             << "canFetchMore"
             << " key:" << keyPath(pnode)
             << " fetch more:" << (!pnode->isLoaded);
+#endif
 
     return !pnode->isLoaded;
 }
 
 //------------------------------------------------------------------------------
 
-QModelIndex QVariantModel::indexOfNode(node_t* node, int column) const
+QModelIndex QVariantModel::indexForNode(node_t* node, int column) const
 {
     Q_ASSERT(node != nullptr);
     if (node == mp_root.data())
         return QModelIndex();
     int row = 0;
-    if (node->parent)
-        row = node->parent->visibleChildren.indexOf(node);
+    if (node->parent) {
+        // if we never looked for the index in parent
+        if (node->indexInParent < 0)
+            node->indexInParent = node->parent->visibleChildren.indexOf(node);
+        row = node->indexInParent;
+    }
     Q_ASSERT(row >= 0);
     return createIndex(row, column, node);
 }
 
-QModelIndex QVariantModel::indexOfNode(node_t* node, Column col) const
+QModelIndex QVariantModel::indexForNode(node_t* node, Column col) const
 {
-    return indexOfNode(node, column(col));
+    return indexForNode(node, column(col));
 }
 
 QModelIndex QVariantModel::index(int row, int column,
@@ -408,9 +421,11 @@ QModelIndex QVariantModel::index(int row, int column,
         pnode = static_cast<node_t*>(parent.internalPointer());
     Q_ASSERT(pnode != nullptr);
 
-    qDebugModelFunc() << "index" << row << column << parent.data()
-                      << QVariantDataInfo(pnode->keyInParent).displayText()
-                      << (pnode == mp_root.data() ? "isRoot" : "notRoot");
+#ifdef QVM_DEBUG_MODEL_FUNC
+    qDebug() << "index" << row << column << parent.data()
+             << QVariantDataInfo(pnode->keyInParent).displayText()
+             << (pnode == mp_root.data() ? "isRoot" : "notRoot");
+#endif
 
     int childrenCount = pnode->visibleChildren.count();
 
@@ -427,7 +442,7 @@ QModelIndex QVariantModel::parent(const QModelIndex& child) const
         node_t* node = static_cast<node_t*>(child.internalPointer());
         Q_ASSERT(node != nullptr);
         if (node->parent && node->parent != mp_root.data())
-            return indexOfNode(node->parent, child.column());
+            return indexForNode(node->parent, child.column());
     }
 
     return QModelIndex();
@@ -440,10 +455,12 @@ bool QVariantModel::hasChildren(const QModelIndex& parent) const
         pnode = static_cast<node_t*>(parent.internalPointer());
     Q_ASSERT(pnode != nullptr);
 
-    qDebugModelFunc() << "hasChildren"
-                      << QVariantDataInfo(pnode->keyInParent).displayText()
-                      << (pnode == mp_root.data() ? "isRoot" : "notRoot")
-                      << (pnode->isLoaded ? !pnode->visibleChildren.isEmpty() : true);
+#ifdef QVM_DEBUG_MODEL_FUNC
+    qDebug() << "hasChildren"
+             << QVariantDataInfo(pnode->keyInParent).displayText()
+             << (pnode == mp_root.data() ? "isRoot" : "notRoot")
+             << (pnode->isLoaded ? !pnode->visibleChildren.isEmpty() : true);
+#endif
 
     // if the node is fully loaded, we check the real children number
     if (pnode->isLoaded)
@@ -459,10 +476,12 @@ int QVariantModel::rowCount(const QModelIndex& parent) const
         pnode = static_cast<node_t*>(parent.internalPointer());
     Q_ASSERT(pnode != nullptr);
 
-    qDebugModelFunc()<< "rowCount"
-                     << QVariantDataInfo(pnode->keyInParent).displayText()
-                     << (pnode == mp_root.data() ? "isRoot" : "notRoot")
-                     << pnode->visibleChildren.count();
+#ifdef QVM_DEBUG_MODEL_FUNC
+    qDebug()<< "rowCount"
+            << QVariantDataInfo(pnode->keyInParent).displayText()
+            << (pnode == mp_root.data() ? "isRoot" : "notRoot")
+            << pnode->visibleChildren.count();
+#endif
 
     int count = pnode->visibleChildren.count();
     // if still loading, add a loading hint node
@@ -1114,11 +1133,13 @@ bool QVariantModel::isAcceptedNode(node_t *root) const
     isVisible |= (vkey && filterValue(root->value));
     isVisible |= (tkey && filterType(root->value.userType()));
 
-    qDebugFilter() << (QString("filter node content with ")
-                       + m_filterRx.pattern()
-                       + " "
-                       + DBG_NODE(root)
-                       + (isVisible ? " => visible" : " => hidden"));
+#ifdef QVM_DEBUG_FILTER
+    qDebug() << (QString("filter node content with ")
+                 + m_filterRx.pattern()
+                 + " "
+                 + DBG_NODE(root)
+                 + (isVisible ? " => visible" : " => hidden"));
+#endif
 
     return isVisible;
 }
@@ -1135,7 +1156,7 @@ bool QVariantModel::isFilterEnabled() const
 //    // actual filter
 //    if (isFilterEnabled()) {
 //        if (root == mp_root.data()) {
-//            qDebugFilter() << "begin filter"
+//            qDebug() << "begin filter"
 //                           << FILTER_TYPE_NAMES[m_filterType]
 //                              << m_filterRx.pattern();
 //            beginResetModel();
@@ -1178,14 +1199,14 @@ bool QVariantModel::isFilterEnabled() const
 
 //        if (root == mp_root.data()) {
 //            endResetModel();
-//            qDebugFilter() << "end filter";
+//            qDebug() << "end filter";
 //        }
 //    }
 //    // display all
 //    else {
 //        // so much change, better reset than insert hidden row
 //        if (root == mp_root.data()) {
-//            qDebugFilter().nospace() << "begin clear filter";
+//            qDebug().nospace() << "begin clear filter";
 //            beginResetModel();
 //        }
 
@@ -1199,7 +1220,7 @@ bool QVariantModel::isFilterEnabled() const
 //        root->visible = true;
 
 //        if (root == mp_root.data()) {
-//            qDebugFilter().nospace() << "end clear filter";
+//            qDebug().nospace() << "end clear filter";
 //            endResetModel();
 //        }
 //    }
@@ -1298,10 +1319,10 @@ void QVariantModelDataLoader::buildNode(node_t* node)
     int keysCount = keys.count();
     Model::clearChildren(node, keysCount);
 
-#ifdef QVARIANTMODEL_DEBUG
+#ifdef QVM_DEBUG_BUILD
     QString rootKeyStr = Model::keyPath(node);
     int childrenCount = 0;
-    qDebugLoad().nospace()
+    qDebug().nospace()
             << "build node key:" << rootKeyStr << " begin total: " << keysCount;
 #endif
 
@@ -1326,9 +1347,9 @@ void QVariantModelDataLoader::buildNode(node_t* node)
         if (childDInfo.isContainer() && childDInfo.isEmptyContainer() == false)
             child->isLoaded = false;
 
-#ifdef QVARIANTMODEL_DEBUG
+#ifdef QVM_DEBUG_BUILD
         if (newChildren.size() >= SprintBuildSize) {
-            qDebugLoad().nospace()
+            qDebug().nospace()
                     << "build node"
                     << " key:" << rootKeyStr
                     << " loaded: " << childrenCount
@@ -1354,8 +1375,8 @@ void QVariantModelDataLoader::buildNode(node_t* node)
         newChildren.clear();
     }
 
-#ifdef QVARIANTMODEL_DEBUG
-    qDebugLoad().nospace()
+#ifdef QVM_DEBUG_BUILD
+    qDebug().nospace()
             << "build node"
             << " key:" << rootKeyStr
             << " loaded: " << childrenCount
@@ -1372,54 +1393,54 @@ void QVariantModelDataLoader::buildNode(node_t* node)
     // In side of this, we do not set the loading flag here for the same reasons.
 
     // second: we build recursively root's children
-//    int rootChildrenOffset = 0;
-//    bool isOneNotLoaded = true;
-//    while (isOneNotLoaded) {
-//        // we reset the flag that indicates we have to continue loading
-//        isOneNotLoaded = false;
+    //    int rootChildrenOffset = 0;
+    //    bool isOneNotLoaded = true;
+    //    while (isOneNotLoaded) {
+    //        // we reset the flag that indicates we have to continue loading
+    //        isOneNotLoaded = false;
 
-//        // gather next children for this loop
-//        QList<node_t*> localChildren;
-//        {
-//            // we supposed `root->children` never shrink while building nodes
-//            QMutexLocker locker(&mutex);
+    //        // gather next children for this loop
+    //        QList<node_t*> localChildren;
+    //        {
+    //            // we supposed `root->children` never shrink while building nodes
+    //            QMutexLocker locker(&mutex);
 
-//            // get nodes from already integrated nodes (and may be chown)
-//            int extractionCount = qBound(
-//                        0, root->children.count() - rootChildrenOffset,
-//                        (int)ChildrenSprintSize);
-//            localChildren = root->children.mid(
-//                        rootChildrenOffset, extractionCount);
+    //            // get nodes from already integrated nodes (and may be chown)
+    //            int extractionCount = qBound(
+    //                        0, root->children.count() - rootChildrenOffset,
+    //                        (int)ChildrenSprintSize);
+    //            localChildren = root->children.mid(
+    //                        rootChildrenOffset, extractionCount);
 
-//            // get nodes not yet integrated nodes
-//            extractionCount = qBound(
-//                        0, root->createdChildren.count() - (rootChildrenOffset + localChildren.count() - root->children.count()),
-//                        (int)ChildrenSprintSize - localChildren.count());
-//            localChildren.append(root->createdChildren.mid(
-//                                     rootChildrenOffset + localChildren.count(),
-//                                     extractionCount));
+    //            // get nodes not yet integrated nodes
+    //            extractionCount = qBound(
+    //                        0, root->createdChildren.count() - (rootChildrenOffset + localChildren.count() - root->children.count()),
+    //                        (int)ChildrenSprintSize - localChildren.count());
+    //            localChildren.append(root->createdChildren.mid(
+    //                                     rootChildrenOffset + localChildren.count(),
+    //                                     extractionCount));
 
-//            rootChildrenOffset += localChildren.count();
+    //            rootChildrenOffset += localChildren.count();
 
-//            if (rootChildrenOffset >= root->children.count()
-//                    + root->createdChildren.count())
-//                rootChildrenOffset = 0;
-//        }
+    //            if (rootChildrenOffset >= root->children.count()
+    //                    + root->createdChildren.count())
+    //                rootChildrenOffset = 0;
+    //        }
 
-//        // build children
-//        for (auto it = localChildren.begin(); it != localChildren.end(); ++it) {
-//            node_t* child = *it;
-//            // if child must be build
-//            if (child->isLoaded == false
-//                    && child->createdChildren.isEmpty()) {
-//                isOneNotLoaded = true;
-//                buildNode(*it);
-//            }
-//        }
-//    }
+    //        // build children
+    //        for (auto it = localChildren.begin(); it != localChildren.end(); ++it) {
+    //            node_t* child = *it;
+    //            // if child must be build
+    //            if (child->isLoaded == false
+    //                    && child->createdChildren.isEmpty()) {
+    //                isOneNotLoaded = true;
+    //                buildNode(*it);
+    //            }
+    //        }
+    //    }
 
-#ifdef QVARIANTMODEL_DEBUG
-    qDebugLoad().nospace()
+#ifdef QVM_DEBUG_BUILD
+    qDebug().nospace()
             << "build node key:" << rootKeyStr << " done";
 #endif
 }

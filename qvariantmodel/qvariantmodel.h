@@ -34,6 +34,7 @@ class QVariantModel : public QAbstractItemModel
 
         node_t* parent = nullptr;
         QVariant keyInParent;
+        int indexInParent = -1;
 
         QList<node_t*> children;
         QList<node_t*> visibleChildren;
@@ -140,6 +141,7 @@ protected:
 
 private:
 //    void buildNode(node_t *node);
+    void invalidateOrder(node_t* node, int start = 0, int length = -1);
     static void setLoadingHintNode(node_t *node, bool enable);
     static void clearChildren(node_t* node, int reserveSize = 0);
     static QString keyPath(const node_t* node);
