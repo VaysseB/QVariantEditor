@@ -6,7 +6,7 @@
 #include <QAbstractItemModel>
 #include <QRegExp>
 
-//#define QVARIANTMODEL_DEBUG
+#define QVARIANTMODEL_DEBUG
 
 
 class QVariantModel : public QAbstractItemModel
@@ -19,14 +19,28 @@ class QVariantModel : public QAbstractItemModel
     Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(Columns filterColumns READ filterColumns WRITE setFilterColumns NOTIFY filterColumnsChanged)
 
+    enum LoadStep {
+        NodeNotLoaded,
+        NodeLoading,
+        NodeLoaded
+    };
+
+    enum {
+        LoadIncr = 27
+    };
+
     struct node_t {
         QVariant value;
 
         node_t* parent = nullptr;
         QVariant keyInParent;
 
-        QList<node_t*> visibleChildren;
         QList<node_t*> children;
+        QList<node_t*> visibleChildren;
+        bool visible = false;
+
+        // lazing loading
+        LoadStep loadStatus = NodeNotLoaded;
     };
 
     enum InternalSortPolicy {
@@ -62,6 +76,7 @@ public:
     explicit QVariantModel(QObject* parent = nullptr);
     virtual ~QVariantModel();
 
+    // model display
     QModelIndex index(int row, int column,
                       const QModelIndex& parent = QModelIndex()) const;
     QModelIndex parent(const QModelIndex& child) const;
@@ -73,11 +88,18 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const;
     QVariant headerData(int section, Qt::Orientation orientation,
                         int role) const;
-    QVariant data(const QModelIndex& index, int role) const;
-    bool setData(const QModelIndex& index, const QVariant& value, int role);
-    bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex());
-    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex());
 
+    // model datas
+    QVariant data(const QModelIndex& index, int role) const;
+//    bool setData(const QModelIndex& index, const QVariant& value, int role);
+//    bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex());
+//    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex());
+
+    // model data loading
+    void fetchMore(const QModelIndex &parent);
+    bool canFetchMore(const QModelIndex &parent) const;
+
+    // specific model properties
     QVariantList rootDatas() const;
     inline uint displayDepth() const { return m_depth; }
     inline bool dynamicSort() const { return m_dynamicSort; }
@@ -88,7 +110,7 @@ public:
     int column(Column column) const;
 
 signals:
-    void rootDatasChanged(const QVariantList& rootDatas);
+    void rootDatasChanged();
     void displayDepthChanged(uint depth);
     void dynamicSortChanged(bool enabled);
     void filterTypeChanged(FilterType filterType);
@@ -113,19 +135,21 @@ protected:
     void invalidateSubTree(QModelIndex index);
 
 private:
-    void rebuildTree(node_t& node) const;
-    void freeNode(node_t& node) const;
+    void buildNode(node_t *node);
+    void clearChildren(node_t* node, int reserveSize = 0) const;
 
     QModelIndex indexOfNode(node_t* node, int column) const;
-    QModelIndex indexOfNode(node_t* node, Column col) const;
+    QModelIndex indexOfNode(node_t* node, Column col = KeyColumn) const;
 
     void updateFilterRx(QString pattern);
 
     void sortTree(node_t& root, InternalSortStrategy sortStrategy);
-    bool filterTree(node_t& root, InternalSortPolicy sortPolicy);
-    bool isAcceptedNode(node_t& root) const;
 
-    void dumpTree(const node_t *root,
+    bool isFilterEnabled() const;
+    void filterTree(node_t* root, InternalSortPolicy sortPolicy = DynamicSortPolicy);
+    bool isAcceptedNode(node_t* root) const;
+
+    void dumpTree(const node_t *root = nullptr,
                   const QString& prefix = QString()) const;
     void dumpModel(const QModelIndex& rootIndex = QModelIndex(),
                    const QString& prefix = QString()) const;

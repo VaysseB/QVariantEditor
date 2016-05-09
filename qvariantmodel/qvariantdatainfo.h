@@ -45,6 +45,8 @@ public:
     bool isContainer() const;
 
 
+    bool isEmptyContainer() const;
+    int containerCount() const;
     /**
      * @brief Extract the keys of the container.
      * The data must be a container.
@@ -52,6 +54,7 @@ public:
      * @see containerValue
      */
     QList<QVariant> containerKeys() const;
+    QList<QVariant> containerPartKeys(int start, int count) const;
     /**
      * @brief Extract the data of the key from the container.
      * The data must be a container.
@@ -233,14 +236,28 @@ struct index_collection_t {
 
     index_collection_t(const T& collection) : c(collection) {}
 
+    bool isEmpty() const { return c.isEmpty(); }
+    int count() const { return c.count(); }
+
     QList<QVariant> keys() const
     {
         QList<QVariant> l;
         for (int i = 0; i < c.count(); i++)
             l.append(QVariant(i));
-        std::sort(l.begin(), l.end());
         return l;
     }
+
+    QList<QVariant> partKeys(int start, int count) const
+    {
+        int totalCount = c.count();
+        Q_ASSERT(start + count <= totalCount);
+        QList<QVariant> l;
+        count += start;
+        for (int i = start; i < count; i++)
+            l.append(QVariant(i));
+        return l;
+    }
+
 
     QString displayText(int depth) const
     {
@@ -258,6 +275,9 @@ struct associative_collection_t {
 
     associative_collection_t(const T& collection) : c(collection) {}
 
+    bool isEmpty() const { return c.isEmpty(); }
+    int count() const { return c.count(); }
+
     QList<QVariant> keys() const
     {
         QList<QVariant> l;
@@ -265,6 +285,13 @@ struct associative_collection_t {
             l.append(QVariant::fromValue(it.key()));
         std::sort(l.begin(), l.end());
         return l;
+    }
+
+    QList<QVariant> partKeys(int start, int count) const
+    {
+        int totalCount = c.count();
+        Q_ASSERT(start + count <= totalCount);
+        return keys().mid(start, count);
     }
 
     QString displayText(int depth) const

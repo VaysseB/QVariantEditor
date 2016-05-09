@@ -115,6 +115,8 @@ void QTreeVariantWidget::read()
         return;
     }
 
+    qDebug() << "begin to read datas from" << QFileInfo(m_filename).fileName();
+
     QDataStream istream(&output);
     QVariantList datas;
 
@@ -123,6 +125,8 @@ void QTreeVariantWidget::read()
         istream >> oneData;
         datas.append(oneData);
     }
+
+    qDebug() << "done read datas from" << QFileInfo(m_filename).fileName();
 
     switch (istream.status()) {
     case QDataStream::ReadPastEnd:
@@ -154,6 +158,8 @@ void QTreeVariantWidget::write()
         return;
     }
 
+    qDebug() << "begin to writo datas to" << QFileInfo(m_filename).fileName();
+
     QDataStream ostream(&output);
     QVariantList datas = mp_model->rootDatas()  ;
     for (auto it = datas.constBegin(); it != datas.constEnd()
@@ -167,6 +173,8 @@ void QTreeVariantWidget::write()
     }
 
     output.close();
+
+    qDebug() << "done write datas to" << QFileInfo(m_filename).fileName();
 
     // write succeed
     setWindowModified(false);

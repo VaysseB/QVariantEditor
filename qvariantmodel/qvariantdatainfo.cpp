@@ -106,6 +106,54 @@ bool QVariantDataInfo::isContainer() const
 
 //------------------------------------------------------------------------------
 
+bool QVariantDataInfo::isEmptyContainer() const
+{
+    Q_ASSERT(isContainer());
+    bool empty;
+
+    // we handle only a reduced number
+    switch(m_cdata.type())
+    {
+    case QVariant::List:
+        empty = QtPrivate::VariantDataInfo::IndexCollection(m_cdata.toList()).isEmpty();
+        break;
+    case QVariant::Hash:
+        empty = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toHash()).isEmpty();
+        break;
+    case QVariant::Map:
+        empty = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toMap()).isEmpty();
+        break;
+    default:
+        break;
+    }
+
+    return empty;
+}
+
+int QVariantDataInfo::containerCount() const
+{
+    Q_ASSERT(isContainer());
+    int count;
+
+    // we handle only a reduced number
+    switch(m_cdata.type())
+    {
+    case QVariant::List:
+        count = QtPrivate::VariantDataInfo::IndexCollection(m_cdata.toList()).count();
+        break;
+    case QVariant::Hash:
+        count = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toHash()).count();
+        break;
+    case QVariant::Map:
+        count = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toMap()).count();
+        break;
+    default:
+        break;
+    }
+
+    return count;
+}
+
 QList<QVariant> QVariantDataInfo::containerKeys() const
 {
     Q_ASSERT(isContainer());
@@ -122,6 +170,31 @@ QList<QVariant> QVariantDataInfo::containerKeys() const
         break;
     case QVariant::Map:
         keys = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toMap()).keys();
+        break;
+    default:
+        break;
+    }
+
+    return keys;
+}
+
+QList<QVariant> QVariantDataInfo::containerPartKeys(int start, int count) const
+{
+    Q_ASSERT(isContainer());
+    Q_ASSERT(start >= 0 && count > 0);
+    QList<QVariant> keys;
+
+    // we handle only a reduced number
+    switch(m_cdata.type())
+    {
+    case QVariant::List:
+        keys = QtPrivate::VariantDataInfo::IndexCollection(m_cdata.toList()).partKeys(start, count);
+        break;
+    case QVariant::Hash:
+        keys = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toHash()).partKeys(start, count);
+        break;
+    case QVariant::Map:
+        keys = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toMap()).partKeys(start, count);
         break;
     default:
         break;
