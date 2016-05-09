@@ -191,6 +191,17 @@ void QTreeVariantWidget::setOptionsVisible(bool visible)
 void QTreeVariantWidget::setSearchVisible(bool visible)
 {
     ui->widgetSearch->setVisible(visible);
+
+    // if was supposed to be searched
+    QString searchText = ui->lineSearch->text();
+    if (searchText.isEmpty() == false) {
+        // if became visible -> search active
+        if (visible)
+            mp_model->setFilterText(searchText);
+        // if became hidden -> search inactive
+        else
+            mp_model->setFilterText(QString());
+    }
 }
 
 void QTreeVariantWidget::searchTypeChanged(int index)

@@ -5,8 +5,8 @@
 #include "qvariantdatainfo.h"
 
 #ifdef QT_DEBUG
-//#define QVM_DEBUG_MODEL_FUNC
-#define QVM_DEBUG_LOAD
+#define QVM_DEBUG_MODEL_FUNC
+//#define QVM_DEBUG_LOAD
 #endif
 
 
@@ -98,8 +98,8 @@ void QVariantModel::buildNode(node_t* root)
                 << "build node"
                 << " key:" << QVariantDataInfo(root->keyInParent).displayText()
                 << " loaded " << root->children.count()
-                << "/ total " << dInfo.containerCount()
-                << "/ loading now " << stepLoadedCount;
+                << "/total " << dInfo.containerCount()
+                << "/loading now " << stepLoadedCount;
 
         int prevCount = root->children.count();
 
