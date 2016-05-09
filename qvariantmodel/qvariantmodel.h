@@ -5,9 +5,13 @@
 #include <QObject>
 #include <QAbstractItemModel>
 #include <QRegExp>
+#include <QRunnable>
+#include <QMutex>
 
 #define QVARIANTMODEL_DEBUG
 
+
+class QVariantModelDataLoader;
 
 class QVariantModel : public QAbstractItemModel
 {
@@ -19,14 +23,10 @@ class QVariantModel : public QAbstractItemModel
     Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(Columns filterColumns READ filterColumns WRITE setFilterColumns NOTIFY filterColumnsChanged)
 
-    enum LoadStep {
-        NodeNotLoaded,
-        NodeLoading,
-        NodeLoaded
-    };
+    friend class QVariantModelDataLoader;
 
     enum {
-        LoadIncr = 27
+        SizeLimitToLoadAsync = 200
     };
 
     struct node_t {
@@ -40,7 +40,9 @@ class QVariantModel : public QAbstractItemModel
         bool visible = false;
 
         // lazing loading
-        LoadStep loadStatus = NodeNotLoaded;
+        bool isLoaded = true;
+        node_t* hintNode = nullptr; // dummy to show hint
+        QVariantModelDataLoader* loader = nullptr;
     };
 
     enum InternalSortPolicy {
@@ -71,6 +73,8 @@ public:
         Regex,
         Fixed
     };
+
+    static const char* FILTER_TYPE_NAMES[];
 
 public:
     explicit QVariantModel(QObject* parent = nullptr);
@@ -132,18 +136,20 @@ protected:
     virtual bool filterType(int type) const;
     virtual bool filterOnDisplayText(const QString& text) const;
 
-    void invalidateSubTree(QModelIndex index);
+//    void invalidateSubTree(QModelIndex index);
 
 private:
-    void buildNode(node_t *node);
-    void clearChildren(node_t* node, int reserveSize = 0) const;
+//    void buildNode(node_t *node);
+    static void setLoadingHintNode(node_t *node, bool enable);
+    static void clearChildren(node_t* node, int reserveSize = 0);
+    static QString keyPath(const node_t* node);
 
     QModelIndex indexOfNode(node_t* node, int column) const;
     QModelIndex indexOfNode(node_t* node, Column col = KeyColumn) const;
 
     void updateFilterRx(QString pattern);
 
-    void sortTree(node_t& root, InternalSortStrategy sortStrategy);
+//    void sortTree(node_t& root, InternalSortStrategy sortStrategy);
 
     bool isFilterEnabled() const;
     void filterTree(node_t* root, InternalSortPolicy sortPolicy = DynamicSortPolicy);
@@ -156,6 +162,7 @@ private:
 
 private:
     QSharedPointer<node_t> mp_root;
+
     uint m_depth = 0;
     bool m_dynamicSort;
     FilterType m_filterType = Contains;
@@ -164,5 +171,35 @@ private:
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(QVariantModel::Columns)
+
+//==============================================================================
+
+class QVariantModelDataLoader : public QRunnable
+{
+    typedef QVariantModel Model;
+    typedef Model::node_t node_t;
+
+    enum {
+        SprintBuildSize = 50,
+        ChildrenSprintSize = 200
+    };
+
+public:
+    QVariantModelDataLoader(node_t* root);
+
+    void run();
+
+    void buildNode(node_t* node);
+
+    node_t* root;
+    QMutex mutex; // mutex for `createdChildren` and `isDone`
+
+    struct {
+        QList<node_t*> createdChildren;
+        bool isDone;
+    } exclusive;
+
+//    bool stopAndDiscardAsked = false;
+};
 
 #endif // QVARIANTMODEL_H
