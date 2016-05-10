@@ -48,7 +48,7 @@ void QVariantModel::setRootDatas(const QVariantList &rootDatas)
     mp_root->loaded = rootDatas.isEmpty();
 
     if (mp_root->loaded == false)
-        loadNode(QModelIndex(), mp_root.data(), false);
+        loadNode(QModelIndex(), mp_root.data(), NoChangedSignalsEmitted);
 
     endResetModel();
 
@@ -229,7 +229,9 @@ void QVariantModel::cached(node_t* node, int textDepth, CacheRoles roles)
 #endif
 }
 
-void QVariantModel::recachedTree(node_t* pnode, CacheRoles cacheRoles)
+void QVariantModel::recachedTree(node_t* pnode,
+                                 CacheRoles cacheRoles,
+                                 bool canModifyModel)
 {
 #ifdef QVM_DEBUG_CACHE
     // test valid cache
@@ -253,7 +255,7 @@ void QVariantModel::recachedTree(node_t* pnode, CacheRoles cacheRoles)
 
     // emit update (only if not tree root, because
     // this is useless as it is hidden)
-    if (pnode != mp_root.data()) {
+    if (canModifyModel && pnode != mp_root.data()) {
         QVector<int> rolesChanged;
         if ((cacheRoles & CacheText))
             rolesChanged << Qt::DisplayRole;
@@ -285,6 +287,8 @@ void QVariantModel::loadNode(const QModelIndex& parent,
             << " key:" << keyPath(pnode)
             << " loader:" << ((void*)pnode->loader);
 #endif
+
+    QList<node_t*> newlyCreatedChildren;
 
     // if never asked to load
     if (pnode->loader == nullptr) {
@@ -321,7 +325,11 @@ void QVariantModel::loadNode(const QModelIndex& parent,
 
             if (canModifyModel)
                 endInsertRows();
+
+            // we stop here, the loading is started
+            return;
         }
+        // direct load async
         else {
 #ifdef QVM_DEBUG_LOAD
             qDebug().nospace()
@@ -333,9 +341,11 @@ void QVariantModel::loadNode(const QModelIndex& parent,
             // load now
             pnode->loader->run();
 
-            int count = pnode->loader->exclusive.createdChildren.count();
+            // get created children
+            pnode->loader->exclusive.createdChildren.swap(newlyCreatedChildren);
 
 #ifdef QVM_DEBUG_LOAD
+            int count = pnode->loader->exclusive.createdChildren.count();
             qDebug().nospace()
                     << "loadMore"
                     << " key:" << keyPath(pnode)
@@ -345,97 +355,86 @@ void QVariantModel::loadNode(const QModelIndex& parent,
             // beware of this line: `isLoaded == false` supposed the hint node
             // is visible and thus 1 is added to rowCount() in this case
             pnode->loaded = true;
-
-            if (canModifyModel)
-                beginInsertRows(parent, 0, count-1);
-
-            pnode->children.append(pnode->loader->exclusive.createdChildren);
-            pnode->visibleChildren.append(pnode->loader->exclusive.createdChildren);
-            pnode->loader->exclusive.createdChildren.clear();
-            invalidateOrder(pnode);
-
-            if (canModifyModel)
-                endInsertRows();
-
-            // filter & sort
-#ifdef QVM_DEBUG_CHANGE_MODEL
-            qDebug() << "begin filter"
-                     << keyPath(pnode)
-                     << (isFilterEnabled() ? "select" : "clear")
-                     << FILTER_TYPE_NAMES[m_filterType]
-                        << m_filterRx.pattern();
-#endif
-            filterTree(pnode, canModifyModel);
-#ifdef QVM_DEBUG_CHANGE_MODEL
-            qDebug() << "end filter";
-#endif
         }
     }
-    // if asked to load previously, we gather the created nodes
+    // if asked to load previously, we gather the created nodes from the loader
+    // this block is also made by the locker constraint mecanism only
     else {
-        // this block is made by the locker constraint mecanism only
-        {
-            QMutexLocker locker(&pnode->loader->mutex);
+        QMutexLocker locker(&pnode->loader->mutex);
 
-            int createdCount = pnode->loader->exclusive.createdChildren.count();
-            if (createdCount > 0) {
+        // get created children
+        pnode->loader->exclusive.createdChildren.swap(newlyCreatedChildren);
 
-                int shownCount = pnode->visibleChildren.count();
-                if (canModifyModel)
-                    beginInsertRows(parent, shownCount, shownCount+createdCount-1);
-
-                pnode->children.append(pnode->loader->exclusive.createdChildren);
-                pnode->visibleChildren.append(pnode->loader->exclusive.createdChildren);
-                pnode->loader->exclusive.createdChildren.clear();
-                invalidateOrder(pnode, shownCount);
-
-                if (canModifyModel)
-                    endInsertRows();
-
-                // end loading state if done
-                if (pnode->loader->exclusive.isDone) {
-                    pnode->loaded = true;
+        // end loading state if done
+        if (pnode->loader->exclusive.isDone) {
+            pnode->loaded = true;
 
 #ifdef QVM_DEBUG_LOAD
-                    qDebug().nospace()
-                            << "loadMore"
-                            << " key:" << keyPath(pnode)
-                            << " done count:" << pnode->children.count();
+            qDebug().nospace()
+                    << "loadMore"
+                    << " key:" << keyPath(pnode)
+                    << " done count:" << pnode->children.count();
 #endif
 
-                    // we remove the "please wait data are loading" row
-                    int count = pnode->children.count();
-                    if (canModifyModel)
-                        beginRemoveRows(parent, count-1, count-1);
+            // we remove the "please wait data are loading" row
+            int count = pnode->children.count();
+            if (canModifyModel)
+                beginRemoveRows(parent, count-1, count-1);
 
-                    setLoadingHintNode(pnode, false);
+            setLoadingHintNode(pnode, false);
 
-                    if (canModifyModel)
-                        endRemoveRows();
-                }
-#ifdef QVM_DEBUG_LOAD
-                else {
-                    qDebug().nospace()
-                            << "loadMore"
-                            << " key:" << keyPath(pnode)
-                            << " state:" << pnode->children.count();
-                }
-#endif
-
-                // filter & sort
-#ifdef QVM_DEBUG_CHANGE_MODEL
-                qDebug() << "begin filter"
-                         << keyPath(pnode)
-                         << (isFilterEnabled() ? "select" : "clear")
-                         << FILTER_TYPE_NAMES[m_filterType]
-                            << m_filterRx.pattern();
-#endif
-                filterTree(pnode, canModifyModel);
-#ifdef QVM_DEBUG_CHANGE_MODEL
-                qDebug() << "end filter";
-#endif
-            }
+            if (canModifyModel)
+                endRemoveRows();
         }
+#ifdef QVM_DEBUG_LOAD
+        else {
+            qDebug().nospace()
+                    << "loadMore"
+                    << " key:" << keyPath(pnode)
+                    << " state:" << pnode->children.count();
+        }
+#endif
+    }
+
+    // add the created children if any
+    int createdCount = newlyCreatedChildren.count();
+    if (createdCount > 0) {
+
+        int shownCount = pnode->visibleChildren.count();
+        if (canModifyModel)
+            beginInsertRows(parent, shownCount, shownCount+createdCount-1);
+
+        pnode->children.append(newlyCreatedChildren);
+        pnode->visibleChildren.append(newlyCreatedChildren);
+
+        // if display depth changed while loading, we have to rebuild cache
+        if (m_depth != pnode->loader->to_cache.displayDepth) {
+            for (auto itChild = newlyCreatedChildren.constBegin();
+                 itChild != newlyCreatedChildren.constEnd();
+                 ++itChild)
+                recachedTree(*itChild, CacheText, NoChangedSignalsEmitted);
+        }
+
+        newlyCreatedChildren.clear();
+
+        // rebuild node children `indexInParent` member
+        invalidateOrder(pnode, shownCount);
+
+        if (canModifyModel)
+            endInsertRows();
+
+        // filter & sort
+#ifdef QVM_DEBUG_CHANGE_MODEL
+        qDebug() << "begin filter"
+                 << keyPath(pnode)
+                 << (isFilterEnabled() ? "select" : "clear")
+                 << FILTER_TYPE_NAMES[m_filterType]
+                    << m_filterRx.pattern();
+#endif
+        filterTree(pnode, canModifyModel);
+#ifdef QVM_DEBUG_CHANGE_MODEL
+        qDebug() << "end filter";
+#endif
     }
 
     // if node is loaded, we delete the loader

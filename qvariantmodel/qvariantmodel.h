@@ -37,7 +37,8 @@ class QVariantModel : public QAbstractItemModel
     friend class QVariantModelDataLoader;
 
     enum {
-        SizeLimitToLoadAsync = 200
+        SizeLimitToLoadAsync = 200,
+        NoChangedSignalsEmitted = 0
     };
 
     struct cache_row_t {
@@ -201,7 +202,8 @@ private:
                        int textDepth,
                        CacheRoles roles = FullCache); // build cache
     void recachedTree(node_t* pnode,
-                      CacheRoles roles = FullCache); // rebuild cache text
+                      CacheRoles roles = FullCache,
+                      bool canModifyModel = true); // rebuild cache text
 
     static void clearChildren(node_t* node, int reserveSize = 0);
     static QString keyPath(const node_t* node);
@@ -263,7 +265,7 @@ public:
     } exclusive; // section supposed to be protected by mutex
 
     struct {
-        int displayDepth = 0;
+        uint displayDepth = 0;
     } to_cache;
 };
 
