@@ -141,56 +141,36 @@
         <translation>Type</translation>
     </message>
     <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="33"/>
-        <source>Contains</source>
-        <translation>Contiens</translation>
-    </message>
-    <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="34"/>
-        <source>Wildcard</source>
-        <translation>Wildcard</translation>
-    </message>
-    <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="35"/>
-        <source>Regex</source>
-        <translation>Regex</translation>
-    </message>
-    <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="36"/>
-        <source>Fixed</source>
-        <translation>Fixe</translation>
-    </message>
-    <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="103"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="115"/>
         <source>untitled</source>
         <translation>sans titre</translation>
     </message>
     <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="245"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="257"/>
         <source>Add new</source>
         <oldsource>Insert new</oldsource>
         <translation>Ajouter nouveau</translation>
     </message>
     <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="255"/>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="276"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="267"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="288"/>
         <source>Insert before</source>
         <translation>Insérer avant</translation>
     </message>
     <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="256"/>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="277"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="268"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="289"/>
         <source>Insert after</source>
         <translation>Insérer après</translation>
     </message>
     <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="257"/>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="278"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="269"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="290"/>
         <source>Remove</source>
         <translation>Supprimer</translation>
     </message>
     <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="275"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="287"/>
         <source>Insert into</source>
         <translation>Insérer dedans</translation>
     </message>

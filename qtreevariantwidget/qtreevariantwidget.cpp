@@ -30,10 +30,22 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     ui->comboFilterField->setCurrentIndex(0);
 
     // search type
-    ui->comboFilterType->addItem(tr("Contains"), QVariantModel::Contains);
-    ui->comboFilterType->addItem(tr("Wildcard"), QVariantModel::WildCard);
-    ui->comboFilterType->addItem(tr("Regex"), QVariantModel::Regex);
-    ui->comboFilterType->addItem(tr("Fixed"), QVariantModel::Fixed);
+    ui->comboFilterType->addItem(
+                qApp->translate(QVariantModel::staticMetaObject.className(),
+                                QVariantModel::FILTER_TYPE_NAMES[QVariantModel::Contains]),
+            QVariantModel::Contains);
+    ui->comboFilterType->addItem(
+                qApp->translate(QVariantModel::staticMetaObject.className(),
+                                QVariantModel::FILTER_TYPE_NAMES[QVariantModel::WildCard]),
+            QVariantModel::WildCard);
+    ui->comboFilterType->addItem(
+                qApp->translate(QVariantModel::staticMetaObject.className(),
+                                QVariantModel::FILTER_TYPE_NAMES[QVariantModel::Regex]),
+            QVariantModel::Regex);
+    ui->comboFilterType->addItem(
+                qApp->translate(QVariantModel::staticMetaObject.className(),
+                                QVariantModel::FILTER_TYPE_NAMES[QVariantModel::Fixed]),
+            QVariantModel::Fixed);
     ui->comboFilterType->setCurrentIndex(0);
 
     // search options
