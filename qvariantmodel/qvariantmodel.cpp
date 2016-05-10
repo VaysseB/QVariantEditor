@@ -973,9 +973,6 @@ void QVariantModel::setDisplayDepth(uint depth)
     emit displayDepthChanged(m_depth);
 
     recachedTree(mp_root.data(), CacheText);
-    dumpTree();
-    dumpTreeCache();
-    dumpModel();
 }
 
 //------------------------------------------------------------------------------
@@ -1111,9 +1108,6 @@ void QVariantModel::setFilterType(FilterType filterType)
 #ifdef QVM_DEBUG_CHANGE_MODEL
         qDebug() << "end filter";
 #endif
-        dumpTree();
-        dumpTreeCache();
-        dumpModel();
     }
 }
 
@@ -1141,9 +1135,6 @@ void QVariantModel::setFilterColumns(Columns filterColumns)
 #ifdef QVM_DEBUG_CHANGE_MODEL
         qDebug() << "end filter";
 #endif
-        dumpTree();
-        dumpTreeCache();
-        dumpModel();
     }
 }
 
@@ -1171,9 +1162,6 @@ void QVariantModel::setFilterText(const QString& filterText)
 #ifdef QVM_DEBUG_CHANGE_MODEL
         qDebug() << "end filter";
 #endif
-        dumpTree();
-        dumpTreeCache();
-        dumpModel();
     }
 }
 
