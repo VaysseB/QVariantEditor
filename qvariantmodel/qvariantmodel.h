@@ -18,7 +18,7 @@
 //#define QVM_DEBUG_BUILD // buildNode()
 //#define QVM_DEBUG_FILTER // isAcceptedNode()
 //#define QVM_DEBUG_CACHE // cached(), recachedTree(), flags(), data()
-//#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}()
+#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filterTree() calls
 #endif
 
 
@@ -207,7 +207,7 @@ private:
     //    void sortTree(node_t& root, InternalSortStrategy sortStrategy);
 
     bool isFilterEnabled() const;
-    void filterTree(node_t* root, InternalSortPolicy sortPolicy = DynamicSortPolicy);
+    void filterTree(node_t* root, bool canModifyModel = true);
     bool isAcceptedNode(node_t* root) const;
 
     void dumpTree(const node_t *root = nullptr,
@@ -237,8 +237,7 @@ class QVariantModelDataLoader : public QRunnable
     typedef Model::node_t node_t;
 
     enum {
-        SprintBuildSize = 50,
-        ChildrenSprintSize = 200
+        SprintBuildSize = 50
     };
 
 public:
@@ -254,13 +253,11 @@ public:
     struct {
         QList<node_t*> createdChildren;
         bool isDone;
-    } exclusive;
+    } exclusive; // section supposed to be protected by mutex
 
     struct {
         int displayDepth = 0;
     } to_cache;
-
-    //    bool stopAndDiscardAsked = false;
 };
 
 #endif // QVARIANTMODEL_H

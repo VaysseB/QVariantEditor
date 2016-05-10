@@ -276,6 +276,7 @@ void QVariantModel::loadNode(const QModelIndex& parent,
     Q_ASSERT(pnode->isLoaded == false);
 
     node_t* hidden_root = mp_root.data();
+    Q_UNUSED(hidden_root); // avoid warning if no assert
     Q_ASSERT((pnode->parent != nullptr) ^ (pnode == hidden_root));
 
 #ifdef QVM_DEBUG_LOAD
@@ -355,6 +356,19 @@ void QVariantModel::loadNode(const QModelIndex& parent,
 
             if (canModifyModel)
                 endInsertRows();
+
+            // filter & sort
+#ifdef QVM_DEBUG_CHANGE_MODEL
+            qDebug() << "begin filter"
+                     << keyPath(pnode)
+                     << (isFilterEnabled() ? "clear" : "select")
+                     << FILTER_TYPE_NAMES[m_filterType]
+                        << m_filterRx.pattern();
+#endif
+            filterTree(pnode, canModifyModel);
+#ifdef QVM_DEBUG_CHANGE_MODEL
+            qDebug() << "end filter";
+#endif
         }
     }
     // if asked to load previously, we gather the created nodes
@@ -408,7 +422,18 @@ void QVariantModel::loadNode(const QModelIndex& parent,
                 }
 #endif
 
-                // todo: sort & filter
+                // filter & sort
+#ifdef QVM_DEBUG_CHANGE_MODEL
+                qDebug() << "begin filter"
+                         << keyPath(pnode)
+                         << (isFilterEnabled() ? "clear" : "select")
+                         << FILTER_TYPE_NAMES[m_filterType]
+                            << m_filterRx.pattern();
+#endif
+                filterTree(pnode, canModifyModel);
+#ifdef QVM_DEBUG_CHANGE_MODEL
+                qDebug() << "end filter";
+#endif
             }
         }
     }
@@ -488,14 +513,17 @@ QModelIndex QVariantModel::index(int row, int column,
              << (pnode == mp_root.data() ? "isRoot" : "notRoot");
 #endif
 
-    int childrenCount = pnode->visibleChildren.count();
 
     // if node not fully loaded AND want the last children -> return hint node
     if (pnode->isLoaded == false && row == pnode->visibleChildren.count()) {
         Q_ASSERT(pnode->hintNode != nullptr); // cannot be null, it is nonsense
         return createIndex(row, column, pnode->hintNode);
     }
+
+    int childrenCount = pnode->visibleChildren.count();
+    Q_UNUSED(childrenCount); // avoid warning if no assert
     Q_ASSERT(row >= 0 && row < childrenCount);
+
     return createIndex(row, column, pnode->visibleChildren.at(row));
 }
 
@@ -571,6 +599,7 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
 
     // impossible case: we gave the hidden root
     node_t* hidden_root = mp_root.data();
+    Q_UNUSED(hidden_root); // avoid warning if no assert
     Q_ASSERT((node->parent != nullptr) ^ (node == hidden_root));
 
 #ifdef QVM_DEBUG_DATA
@@ -626,6 +655,7 @@ QVariant QVariantModel::data(const QModelIndex& index, int role) const
 
     // impossible case: we gave the hidden root
     node_t* hidden_root = mp_root.data();
+    Q_UNUSED(hidden_root); // avoid warning if no assert
     Q_ASSERT((node->parent != nullptr) ^ (node == hidden_root));
 
 #ifdef QVM_DEBUG_DATA
@@ -1077,9 +1107,20 @@ void QVariantModel::setFilterType(FilterType filterType)
     bool nowFiltered = isFilterEnabled();
 
     if (wasFiltered || nowFiltered) {
-        //        filterTree(mp_root.data(), DynamicSortPolicy);
-        //        dumpTree();
-        //        dumpModel();
+#ifdef QVM_DEBUG_CHANGE_MODEL
+        qDebug() << "begin filter"
+                 << keyPath(mp_root.data())
+                 << (isFilterEnabled() ? "clear" : "select")
+                 << FILTER_TYPE_NAMES[m_filterType]
+                    << m_filterRx.pattern();
+#endif
+        filterTree(mp_root.data(), DynamicSortPolicy);
+#ifdef QVM_DEBUG_CHANGE_MODEL
+        qDebug() << "end filter";
+#endif
+        dumpTree();
+        dumpTreeCache();
+        dumpModel();
     }
 }
 
@@ -1096,9 +1137,20 @@ void QVariantModel::setFilterColumns(Columns filterColumns)
     bool nowFiltered = isFilterEnabled();
 
     if (wasFiltered || nowFiltered) {
-        //        filterTree(mp_root.data(), DynamicSortPolicy);
-        //        dumpTree();
-        //        dumpModel();
+#ifdef QVM_DEBUG_CHANGE_MODEL
+        qDebug() << "begin filter"
+                 << keyPath(mp_root.data())
+                 << (isFilterEnabled() ? "clear" : "select")
+                 << FILTER_TYPE_NAMES[m_filterType]
+                    << m_filterRx.pattern();
+#endif
+        filterTree(mp_root.data(), DynamicSortPolicy);
+#ifdef QVM_DEBUG_CHANGE_MODEL
+        qDebug() << "end filter";
+#endif
+        dumpTree();
+        dumpTreeCache();
+        dumpModel();
     }
 }
 
@@ -1115,9 +1167,20 @@ void QVariantModel::setFilterText(const QString& filterText)
     bool nowFiltered = isFilterEnabled();
 
     if (wasFiltered || nowFiltered) {
-        //        filterTree(mp_root.data(), DynamicSortPolicy);
-        //        dumpTree();
-        //        dumpModel();
+#ifdef QVM_DEBUG_CHANGE_MODEL
+        qDebug() << "begin filter"
+                 << keyPath(mp_root.data())
+                 << (isFilterEnabled() ? "clear" : "select")
+                 << FILTER_TYPE_NAMES[m_filterType]
+                    << m_filterRx.pattern();
+#endif
+        filterTree(mp_root.data(), DynamicSortPolicy);
+#ifdef QVM_DEBUG_CHANGE_MODEL
+        qDebug() << "end filter";
+#endif
+        dumpTree();
+        dumpTreeCache();
+        dumpModel();
     }
 }
 
@@ -1181,87 +1244,97 @@ bool QVariantModel::isFilterEnabled() const
     return !m_filterRx.pattern().isEmpty();
 }
 
-//void QVariantModel::filterTree(node_t* root, InternalSortPolicy sortPolicy)
-//{
-//    Q_ASSERT(root);
+void QVariantModel::filterTree(node_t* root, bool canModifyModel)
+{
+    Q_ASSERT(root);
 
-//    // actual filter
-//    if (isFilterEnabled()) {
-//        if (root == mp_root.data()) {
-//            qDebug() << "begin filter"
-//                           << FILTER_TYPE_NAMES[m_filterType]
-//                              << m_filterRx.pattern();
-//            beginResetModel();
-//        }
+    // actual filter
+    if (isFilterEnabled()) {
+        if (root == mp_root.data()) {
+            if (canModifyModel)
+                beginResetModel();
+        }
 
-//        bool wasVisible = root->visible;
-//        if (root->parent)
-//            Q_ASSERT(wasVisible == root->parent->visibleChildren.contains(root));
+        bool wasVisible = root->visible;
+        if (root->parent)
+            Q_ASSERT(wasVisible == root->parent->visibleChildren.contains(root));
 
-//        // filter children
-//        for (auto itChild = root->children.begin();
-//             itChild != root->children.end(); ++itChild) {
-//            filterTree(*itChild, sortPolicy);
-//        }
+        // filter children
+        for (auto itChild = root->children.begin();
+             itChild != root->children.end(); ++itChild) {
+            filterTree(*itChild, canModifyModel);
+        }
 
-//        // if no children to show -> don't show if the node itself is filtered
-//        root->visible = (!root->visibleChildren.isEmpty());
-//        if (root->visible == false)
-//            root->visible = isAcceptedNode(root);
+        // if no children to show -> don't show if the node itself is filtered
+        root->visible = (!root->visibleChildren.isEmpty());
+        if (root->visible == false)
+            root->visible = isAcceptedNode(root);
 
-//        if (root->parent) {
-//            // if appeared
-//            if (root->visible && !wasVisible) {
-//                Q_ASSERT(root->parent->visibleChildren.contains(root) == false);
-//                int insertPos = root->parent->children.indexOf(root);
-//                //                QModelIndex parent = indexOfNode(root->parent);
-//                //                beginInsertRows(parent, insertPos, insertPos);
-//                root->parent->visibleChildren.insert(insertPos, root);
-//                //                endInsertRows();
-//            }
-//            // if disappeared
-//            else if (!root->visible && wasVisible) {
-//                Q_ASSERT(root->parent->visibleChildren.contains(root));
-//                //                QModelIndex index = indexOfNode(root);
-//                //                beginRemoveRows(index.parent(), index.row(), index.row());
-//                root->parent->visibleChildren.removeOne(root);
-//                //                endRemoveRows();
-//            }
-//        }
+        if (root->parent) {
+            // if appeared
+            if (root->visible && !wasVisible) {
+                Q_ASSERT(root->parent->visibleChildren.contains(root) == false);
+                int insertPos = root->parent->children.indexOf(root);
 
-//        if (root == mp_root.data()) {
-//            endResetModel();
-//            qDebug() << "end filter";
-//        }
-//    }
-//    // display all
-//    else {
-//        // so much change, better reset than insert hidden row
-//        if (root == mp_root.data()) {
-//            qDebug().nospace() << "begin clear filter";
-//            beginResetModel();
-//        }
+                //                if (canModifyModel) {
+                //                    QModelIndex parent = indexOfNode(root->parent);
+                //                    beginInsertRows(parent, insertPos, insertPos);
+                //                }
 
-//        // filter children
-//        for (auto itChild = root->children.begin();
-//             itChild != root->children.end(); ++itChild) {
-//            filterTree(*itChild, sortPolicy);
-//        }
+                root->parent->visibleChildren.insert(insertPos, root);
 
-//        root->visibleChildren = root->children;
-//        root->visible = true;
+                //                if (canModifyModel)
+                //                    endInsertRows();
+            }
+            // if disappeared
+            else if (!root->visible && wasVisible) {
+                Q_ASSERT(root->parent->visibleChildren.contains(root));
 
-//        if (root == mp_root.data()) {
-//            qDebug().nospace() << "end clear filter";
-//            endResetModel();
-//        }
-//    }
+                //                if (canModifyModel) {
+                //                    QModelIndex index = indexOfNode(root);
+                //                    beginRemoveRows(index.parent(), index.row(), index.row());
+                //                }
 
-//    //    if (sortPolicy == ForceSort
-//    //            || (m_dynamicSort && sortPolicy == DynamicSortPolicy)) {
-//    //        sortTree(root, SortNodeOnly);
-//    //    }
-//}
+                root->parent->visibleChildren.removeOne(root);
+
+                //                if (canModifyModel)
+                //                    endRemoveRows();
+            }
+        }
+
+        if (root == mp_root.data()) {
+            if (canModifyModel)
+                endResetModel();
+        }
+    }
+    // display all
+    else {
+        // so much change, better reset than insert hidden row
+        if (root == mp_root.data()) {
+            if (canModifyModel)
+                beginResetModel();
+        }
+
+        // filter children
+        for (auto itChild = root->children.begin();
+             itChild != root->children.end(); ++itChild) {
+            filterTree(*itChild, canModifyModel);
+        }
+
+        root->visibleChildren = root->children;
+        root->visible = true;
+
+        if (root == mp_root.data()) {
+            if (canModifyModel)
+                endResetModel();
+        }
+    }
+
+    //    if (sortPolicy == ForceSort
+    //            || (m_dynamicSort && sortPolicy == DynamicSortPolicy)) {
+    //        sortTree(root, SortNodeOnly);
+    //    }
+}
 
 //------------------------------------------------------------------------------
 
@@ -1290,7 +1363,7 @@ void QVariantModel::dumpTreeCache(const node_t* root,
 #ifdef QVARIANTMODEL_DEBUG
     if (root == nullptr) {
         root = mp_root.data();
-        qDebug().nospace() << (prefix + "node(root)");
+        qDebug().nospace() << (prefix + "cache(root)");
     }
     else {
         // qDebug().nospace() << (prefix + DBG_NODE(root));

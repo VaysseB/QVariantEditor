@@ -339,6 +339,7 @@ void QTreeVariantWidget::insertNew()
 {
     int rowInsert = mp_model->rowCount();
     bool isDataInserted = mp_model->insertRows(rowInsert, 1, QModelIndex());
+    Q_UNUSED(isDataInserted); // avoid warning if no assert
     Q_ASSERT(isDataInserted);
 }
 
@@ -346,6 +347,7 @@ void QTreeVariantWidget::insertIntoCurrent()
 {
     QModelIndex insertIndex = ui->treeView->currentIndex();
     bool isDataInserted = mp_model->insertRows(0, 1, insertIndex);
+    Q_UNUSED(isDataInserted); // avoid warning if no assert
     Q_ASSERT(isDataInserted);
 }
 
@@ -354,6 +356,7 @@ void QTreeVariantWidget::insertBeforeCurrent()
     QModelIndex insertIndex = ui->treeView->currentIndex();
     bool isDataInserted = mp_model->insertRows(
                 insertIndex.row(), 1, insertIndex.parent());
+    Q_UNUSED(isDataInserted); // avoid warning if no assert
     Q_ASSERT(isDataInserted);
 }
 
@@ -362,6 +365,7 @@ void QTreeVariantWidget::insertAfterCurrent()
     QModelIndex insertIndex = ui->treeView->currentIndex();
     bool isDataInserted = mp_model->insertRows(
                 insertIndex.row()+1, 1, insertIndex.parent());
+    Q_UNUSED(isDataInserted); // avoid warning if no assert
     Q_ASSERT(isDataInserted);
 }
 
@@ -416,6 +420,7 @@ void QTreeVariantWidget::removeCurrent()
 
             bool isDataRemoved = mp_model->removeRows(
                         firstRow, (lastRow - firstRow + 1), parent);
+            Q_UNUSED(isDataRemoved); // avoid warning if no assert
             Q_ASSERT(isDataRemoved);
         }
     }
