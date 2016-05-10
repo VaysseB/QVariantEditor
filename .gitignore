@@ -2,6 +2,7 @@
 .*
 *.pro.user
 *.qbs.user
+*.autosave
 *.qm
 
 /_save
