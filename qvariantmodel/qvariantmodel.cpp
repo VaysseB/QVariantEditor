@@ -6,15 +6,18 @@
 
 #include "qvariantdatainfo.h"
 
-#ifdef QT_DEBUG
-#define QVM_DEBUG_MODEL_FUNC
+#ifdef QVARIANTMODEL_DEBUG
+//#define QVM_DEBUG_MODEL_FUNC
+//#define QVM_DEBUG_DATA
 //#define QVM_DEBUG_LOAD
 //#define QVM_DEBUG_BUILD
 //#define QVM_DEBUG_FILTER
+//#define QVM_DEBUG_CACHE
 #endif
 
 
-#define DBG_NODE(root) (QString("node(key=") + QVariantDataInfo(root->keyInParent).displayText(1) + ", value=" + QVariantDataInfo(root->value).displayText(1) + ", type=" + QString::number(root->value.userType()) + "-" + root->value.typeName() + ")")
+#define DBG_NODE(p, root) (QString(p) + "node(key=" + QVariantDataInfo(root->keyInParent).displayText(1) + ", value=" + QVariantDataInfo(root->value).displayText(1) + ", type=" + QString::number(root->value.userType()) + "-" + root->value.typeName() + ")")
+#define DBG_NODE_CACHE(p, root) (QString(p) + "cache(TEXT: key=" + root->cache.key.text + ", value=" + root->cache.value.text + ", type=" + root->cache.type.text) << "; FLAGS: type=" << root->cache.key.flags << ", value=" << root->cache.value.flags << ", type=" << root->cache.type.flags << ")"
 
 
 
@@ -47,13 +50,14 @@ QVariantList QVariantModel::rootDatas() const
 
 void QVariantModel::setRootDatas(const QVariantList &rootDatas)
 {
-    //    Q_ASSERT(mp_loader.isNull());
-
     beginResetModel();
 
     mp_root->value = rootDatas;
     mp_root->parent = nullptr;
     mp_root->isLoaded = rootDatas.isEmpty();
+
+    if (mp_root->isLoaded == false)
+        loadNode(QModelIndex(), mp_root.data(), false);
 
     endResetModel();
 
@@ -91,6 +95,16 @@ void QVariantModel::setLoadingHintNode(node_t *node, bool enable)
         node->hintNode = new node_t;
         node->hintNode->parent = node;
         node->hintNode->isLoaded = true;
+
+        Qt::ItemFlags fls = Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+        node->hintNode->cache.key.flags = fls;
+        node->hintNode->cache.value.flags = fls;
+        node->hintNode->cache.type.flags = fls;
+
+        QString txt = tr("Data loading...");
+        node->hintNode->cache.key.text = txt;
+        node->hintNode->cache.value.text = txt;
+        node->hintNode->cache.type.text = txt;
     }
 }
 
@@ -114,136 +128,168 @@ void QVariantModel::invalidateOrder(node_t* node, int start, int length)
     }
 }
 
-//void QVariantModel::buildNode(node_t* root)
-//{
-//    Q_ASSERT(root);
-//    Q_ASSERT(root->loadStatus != NodeLoaded);
-
-//    node_t* hidden_root = mp_root.data();
-//    Q_ASSERT((root->parent != nullptr) ^ (root == hidden_root));
-
-//    QVariantDataInfo dInfo(root->value);
-//    Q_ASSERT(dInfo.isContainer());
-
-//    if (root->loadStatus == NodeNotLoaded
-//            || root->loadStatus == NodeLoading) {
-//        int totalCount = dInfo.containerCount();
-//        int stepLoadedCount = qMin(totalCount - root->children.count(), 20);
-
-//        if (root->loadStatus == NodeNotLoaded)
-//            clearChildren(root, totalCount);
-
-//        QVariantList keys = dInfo.containerPartKeys(root->children.count(),
-//                                                    stepLoadedCount);
-//        Q_ASSERT(keys.count() == stepLoadedCount);
-
-//        qDebugLoad().nospace()
-//                << "build node"
-//                << " key:" << QVariantDataInfo(root->keyInParent).displayText()
-//                << " loaded " << root->children.count()
-//                << "/total " << dInfo.containerCount()
-//                << "/loading now " << stepLoadedCount;
-
-//        int prevCount = root->children.count();
-
-//        QList<node_t*> addedChildren;
-//        for (auto itkey = keys.constBegin(); itkey != keys.constEnd(); ++itkey){
-//            QVariant childData = dInfo.containerValue(*itkey);
-
-//            node_t* child = new node_t;
-//            addedChildren.append(child);
-
-//            child->parent = root;
-//            child->keyInParent = *itkey;
-//            child->value = childData;
-//            child->visible = true;
-
-//            // optimization: give the child loaded status as fully loaded
-//            // if doesn't required to load something
-//            child->loadStatus = NodeLoaded;
-//            QVariantDataInfo childDInfo(child->value);
-//            if (childDInfo.isContainer()
-//                    && childDInfo.isEmptyContainer() == false) {
-//                child->loadStatus = NodeNotLoaded;
-//                setLoadingHintNode(child, true);
-//            }
-//        }
-
-//        QModelIndex index = indexOfNode(root);
-
-//        // add the newly created children
-//        beginInsertRows(index, prevCount, prevCount + stepLoadedCount - 1);
-//        root->children.append(addedChildren);
-//        root->visibleChildren.append(addedChildren);
-//        endInsertRows();
-
-//        // todo: sort
-
-//        // filter if enable
-//        if (isFilterEnabled())
-//            filterTree(root);
-
-//        root->loadStatus = NodeLoading;
-
-//        // if done loading, we saved it
-//        if (root->children.count() == totalCount) {
-//            root->loadStatus = NodeLoaded;
-//            setLoadingHintNode(root, false);
-//        }
-//    }
-//}
-
-void QVariantModel::setDisplayDepth(uint depth)
+void QVariantModel::cached(node_t* node, int textDepth, CacheRoles roles)
 {
-    if (m_depth == depth)
+    Q_ASSERT(node != nullptr);
+
+#ifdef QVM_DEBUG_CACHE
+    qDebug() << "cached" << keyPath(node) << roles;
+#endif
+
+    if (roles == NoCache)
         return;
 
-    m_depth = depth;
-    emit displayDepthChanged(m_depth);
+    Qt::ItemFlags baseFlags = Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+    bool hasParent = (node->parent != nullptr);
+    QVariantDataInfo dInfoKey(node->keyInParent);
+    QVariantDataInfo dInfoValue(node->value);
 
-    // update all children that are containers, and only them
-    //    if (column(ValueColumn) >= 0) {
-    //        QVector<int> roles;
-    //        roles << Qt::DisplayRole;
+    // case were the node cannot have children, because its value is not a
+    // container
+    if ((roles & CacheFlags) && dInfoValue.isContainer() == false)
+        baseFlags |= Qt::ItemNeverHasChildren;
 
-    //        // working list of all nodes that are containers
-    //        QList<node_t*> nodeContainers;
+    // work for key column
+    {
+        if ((roles & CacheText)) {
+            node->cache.key.text = QVariantDataInfo(node->keyInParent)
+                    .displayText(textDepth);
+        }
 
-    //        // add direct containers nodes below root
-    //        for (auto it = mp_root->visibleChildren.constBegin();
-    //             it != mp_root->visibleChildren.constEnd(); ++it) {
-    //            if ((*it)->visibleChildren.isEmpty() == false)
-    //                nodeContainers.append(*it);
-    //        }
+        if ((roles & CacheFlags)) {
+            node->cache.key.flags = baseFlags;
+            bool parentUpdatable = false;
 
-    //        while(nodeContainers.isEmpty() == false) {
-    //            node_t* node = nodeContainers.takeFirst();
-    //            QModelIndex index = indexOfNode(node, ValueColumn);
-    //            emit dataChanged(index, index, roles);
+            // if value is not valid, we still can edit the key, and if has parent
+            // key should be atomic to be edited
+            if (dInfoKey.isAtomic() && hasParent) {
+                // editable only if the direct parent can update keys
+                QMutableVariantDataInfo mutDInfoDirectParent(node->parent->value);
+                Q_ASSERT(mutDInfoDirectParent.isContainer());
+                parentUpdatable = mutDInfoDirectParent.editableKeys();
+                // now we check parents of the direct parent
+                if (parentUpdatable) {
+                    node_t* pnode = node;
+                    // editable only if all the parents can update values
+                    // (from the node parent)
+                    while (pnode->parent != nullptr && parentUpdatable) {
+                        QMutableVariantDataInfo mutDInfoParent(pnode->parent->value);
+                        Q_ASSERT(mutDInfoParent.isContainer());
+                        parentUpdatable = mutDInfoParent.editableValues();
+                        pnode = pnode->parent;
+                    }
+                }
+            }
 
-    //            // add all children that are also containers
-    //            for (auto it = node->visibleChildren.constBegin();
-    //                 it != node->visibleChildren.constEnd(); ++it) {
-    //                if ((*it)->visibleChildren.isEmpty() == false)
-    //                    nodeContainers.append(*it);
-    //            }
-    //        }
-    //    }
+            // if no parent or all parents are editable
+            if (parentUpdatable)
+                node->cache.key.flags |= Qt::ItemIsEditable;
+        }
+    }
+
+    // work for value column
+    {
+        if ((roles & CacheText))
+            node->cache.value.text = QVariantDataInfo(node->value).displayText(textDepth);
+
+        if ((roles & CacheFlags)) {
+            node->cache.value.flags = baseFlags;
+            bool parentUpdatable = false;
+
+            // if value is not valid, the value cannot be edited
+            // value should be atomic to be edited
+            if (node->value.isValid() && dInfoValue.isAtomic()) {
+                node_t* pnode = node;
+                // editable only if all the parents can update values
+                parentUpdatable = true;
+                while (pnode->parent != nullptr && parentUpdatable) {
+                    QMutableVariantDataInfo mutDInfoParent(pnode->parent->value);
+                    Q_ASSERT(mutDInfoParent.isContainer());
+                    parentUpdatable = mutDInfoParent.editableValues();
+                    pnode = pnode->parent;
+                }
+            }
+
+            // if no parent or all parents are editable
+            if (parentUpdatable)
+                node->cache.value.flags |= Qt::ItemIsEditable;
+        }
+    }
+
+    // work for type column
+    {
+        if ((roles & CacheText))
+            node->cache.type.text = node->value.typeName();
+
+        if ((roles & CacheFlags)) {
+            // even if the value is not valid, we can edit the type
+            node->cache.type.flags = baseFlags | Qt::ItemIsEditable;
+        }
+    }
+
+#ifdef QVM_DEBUG_CACHE
+    // test valid cache
+    Q_ASSERT(node->cache.key.text.trimmed().isEmpty() == false);
+    Q_ASSERT(node->cache.value.text.trimmed().isEmpty() == false);
+    Q_ASSERT(node->cache.type.text.trimmed().isEmpty() == false);
+    Q_ASSERT(node->cache.key.flags != Qt::NoItemFlags);
+    Q_ASSERT(node->cache.value.flags != Qt::NoItemFlags);
+    Q_ASSERT(node->cache.type.flags != Qt::NoItemFlags);
+#endif
+}
+
+void QVariantModel::recachedTree(node_t* pnode, CacheRoles cacheRoles)
+{
+#ifdef QVM_DEBUG_CACHE
+    // test valid cache
+    Q_ASSERT(pnode->cache.key.text.trimmed().isEmpty() == false);
+    Q_ASSERT(pnode->cache.value.text.trimmed().isEmpty() == false);
+    Q_ASSERT(pnode->cache.type.text.trimmed().isEmpty() == false);
+    Q_ASSERT(pnode->cache.key.flags != Qt::NoItemFlags);
+    Q_ASSERT(pnode->cache.value.flags != Qt::NoItemFlags);
+    Q_ASSERT(pnode->cache.type.flags != Qt::NoItemFlags);
+#endif
+
+    // first rebuild cache, then emit update (only if not tree root, because
+    // this is useless as it is hidden)
+    if (pnode != mp_root.data())
+        cached(pnode, m_depth, cacheRoles);
+
+    for (auto it = pnode->visibleChildren.constBegin();
+         it != pnode->visibleChildren.constEnd(); ++it) {
+        recachedTree(*it, cacheRoles);
+    }
+
+    // emit update (only if not tree root, because
+    // this is useless as it is hidden)
+    if (pnode != mp_root.data()) {
+        QVector<int> rolesChanged;
+        if ((cacheRoles & CacheText))
+            rolesChanged << Qt::DisplayRole;
+        if ((cacheRoles & CacheFlags)) // can possibly add/remove edition
+            rolesChanged << Qt::EditRole;
+
+        emit dataChanged(indexForNode(pnode, 0),
+                         indexForNode(pnode, columnCount()-1),
+                         rolesChanged);
+    }
 }
 
 //------------------------------------------------------------------------------
 
-void QVariantModel::fetchMore(const QModelIndex &parent)
+void QVariantModel::loadNode(const QModelIndex& parent,
+                             node_t* pnode,
+                             bool canModifyModel)
 {
-    node_t* pnode = mp_root.data();
-    if (parent.isValid())
-        pnode = static_cast<node_t*>(parent.internalPointer());
     Q_ASSERT(pnode != nullptr);
     Q_ASSERT(pnode->isLoaded == false);
 
+    node_t* hidden_root = mp_root.data();
+    Q_ASSERT((pnode->parent != nullptr) ^ (pnode == hidden_root));
+
 #ifdef QVM_DEBUG_LOAD
     qDebug().nospace()
-            << "fetchMore"
+            << "loadMore"
             << " key:" << keyPath(pnode)
             << " loader:" << ((void*)pnode->loader);
 #endif
@@ -254,6 +300,7 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
         Q_ASSERT(pnode->children.isEmpty());
 
         pnode->loader = new QVariantModelDataLoader(pnode);
+        pnode->loader->to_cache.displayDepth = m_depth;
 
         QVariantDataInfo dInfo(pnode->value);
         Q_ASSERT(dInfo.isContainer());
@@ -264,7 +311,7 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
         if (count >= (int)SizeLimitToLoadAsync) {
 #ifdef QVM_DEBUG_LOAD
             qDebug().nospace()
-                    << "fetchMore"
+                    << "loadMore"
                     << " key:" << keyPath(pnode)
                     << " start async";
 #endif
@@ -275,14 +322,18 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
             thPool->start(pnode->loader);
 
             // we insert the "please wait data are loading" row
-            beginInsertRows(parent, 0, 0);
+            if (canModifyModel)
+                beginInsertRows(parent, 0, 0);
+
             setLoadingHintNode(pnode, true);
-            endInsertRows();
+
+            if (canModifyModel)
+                endInsertRows();
         }
         else {
 #ifdef QVM_DEBUG_LOAD
             qDebug().nospace()
-                    << "fetchMore"
+                    << "loadMore"
                     << " key:" << keyPath(pnode)
                     << " load sync";
 #endif
@@ -294,23 +345,25 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
 
 #ifdef QVM_DEBUG_LOAD
             qDebug().nospace()
-                    << "fetchMore"
+                    << "loadMore"
                     << " key:" << keyPath(pnode)
                     << " done count:" << count;
 #endif
 
             // beware of this line: `isLoaded == false` supposed the hint node
-            // is visible, so 1 is added to rowCount() if false
+            // is visible and thus 1 is added to rowCount() in this case
             pnode->isLoaded = true;
 
-            beginInsertRows(parent, 0, count-1);
+            if (canModifyModel)
+                beginInsertRows(parent, 0, count-1);
 
             pnode->children.append(pnode->loader->exclusive.createdChildren);
             pnode->visibleChildren.append(pnode->loader->exclusive.createdChildren);
             pnode->loader->exclusive.createdChildren.clear();
             invalidateOrder(pnode);
 
-            endInsertRows();
+            if (canModifyModel)
+                endInsertRows();
         }
     }
     // if asked to load previously, we gather the created nodes
@@ -323,14 +376,16 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
             if (createdCount > 0) {
 
                 int shownCount = pnode->visibleChildren.count();
-                beginInsertRows(parent, shownCount, shownCount+createdCount-1);
+                if (canModifyModel)
+                    beginInsertRows(parent, shownCount, shownCount+createdCount-1);
 
                 pnode->children.append(pnode->loader->exclusive.createdChildren);
                 pnode->visibleChildren.append(pnode->loader->exclusive.createdChildren);
                 pnode->loader->exclusive.createdChildren.clear();
                 invalidateOrder(pnode, shownCount);
 
-                endInsertRows();
+                if (canModifyModel)
+                    endInsertRows();
 
                 // end loading state if done
                 if (pnode->loader->exclusive.isDone) {
@@ -338,21 +393,25 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
 
 #ifdef QVM_DEBUG_LOAD
                     qDebug().nospace()
-                            << "fetchMore"
+                            << "loadMore"
                             << " key:" << keyPath(pnode)
                             << " done count:" << pnode->children.count();
 #endif
 
                     // we remove the "please wait data are loading" row
                     int count = pnode->children.count();
-                    beginRemoveRows(parent, count-1, count-1);
+                    if (canModifyModel)
+                        beginRemoveRows(parent, count-1, count-1);
+
                     setLoadingHintNode(pnode, false);
-                    endRemoveRows();
+
+                    if (canModifyModel)
+                        endRemoveRows();
                 }
 #ifdef QVM_DEBUG_LOAD
                 else {
                     qDebug().nospace()
-                            << "fetchMore"
+                            << "loadMore"
                             << " key:" << keyPath(pnode)
                             << " state:" << pnode->children.count();
                 }
@@ -361,14 +420,25 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
                 // todo: sort & filter
             }
         }
-
-        // if node is loaded, we delete the loader
-        // but we delete it here because we mustn't delete a locked mutex
-        if (pnode->isLoaded) {
-            delete pnode->loader;
-            pnode->loader = nullptr;
-        }
     }
+
+    // if node is loaded, we delete the loader
+    // but we delete it here because we mustn't delete a locked mutex
+    if (pnode->isLoaded && pnode->loader != nullptr) {
+        delete pnode->loader;
+        pnode->loader = nullptr;
+    }
+}
+
+void QVariantModel::fetchMore(const QModelIndex &parent)
+{
+    node_t* pnode = mp_root.data();
+    if (parent.isValid())
+        pnode = static_cast<node_t*>(parent.internalPointer());
+    Q_ASSERT(pnode != nullptr);
+
+    if (pnode->isLoaded == false)
+        loadNode(parent, pnode);
 }
 
 bool QVariantModel::canFetchMore(const QModelIndex &parent) const
@@ -430,8 +500,10 @@ QModelIndex QVariantModel::index(int row, int column,
     int childrenCount = pnode->visibleChildren.count();
 
     // if node not fully loaded AND want the last children -> return hint node
-    if (pnode->isLoaded == false && row == pnode->visibleChildren.count())
+    if (pnode->isLoaded == false && row == pnode->visibleChildren.count()) {
+        Q_ASSERT(pnode->hintNode != nullptr); // cannot be null, it is nonsense
         return createIndex(row, column, pnode->hintNode);
+    }
     Q_ASSERT(row >= 0 && row < childrenCount);
     return createIndex(row, column, pnode->visibleChildren.at(row));
 }
@@ -477,10 +549,10 @@ int QVariantModel::rowCount(const QModelIndex& parent) const
     Q_ASSERT(pnode != nullptr);
 
 #ifdef QVM_DEBUG_MODEL_FUNC
-    qDebug()<< "rowCount"
-            << QVariantDataInfo(pnode->keyInParent).displayText()
-            << (pnode == mp_root.data() ? "isRoot" : "notRoot")
-            << pnode->visibleChildren.count();
+    qDebug() << "rowCount"
+             << QVariantDataInfo(pnode->keyInParent).displayText()
+             << (pnode == mp_root.data() ? "isRoot" : "notRoot")
+             << pnode->visibleChildren.count();
 #endif
 
     int count = pnode->visibleChildren.count();
@@ -510,76 +582,23 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
     node_t* hidden_root = mp_root.data();
     Q_ASSERT((node->parent != nullptr) ^ (node == hidden_root));
 
-    // special case: node is loading hint node
-    if (node == node->parent->hintNode)
-        return flags;
+#ifdef QVM_DEBUG_DATA
+    qDebug() << "flags" << index.row() << index.column()
+             << " key:" << keyPath(node)
+             << (node == node->parent->hintNode ? "hintNode" : "\0");
+#ifdef QVM_DEBUG_CACHE
+    qDebug().nospace() << "cache flags key:" << node->cache.key.flags
+                       << " value:" << node->cache.value.flags
+                       << " type:" << node->cache.type.flags;
+#endif // QVM_DEBUG_CACHE
+#endif // QVM_DEBUG_DATA
 
-    // case were the node cannot have children, because its value is not a
-    // container
-    QMutableVariantDataInfo mutDInfo(node->value);
-    if (mutDInfo.isContainer() == false)
-        flags |= Qt::ItemNeverHasChildren;
-
-    // test for each column if the node is editable
-    if (index.column() == column(KeyColumn)) {
-        // if value is not valid, we still can edit the key
-
-        // key should be atomic
-        QVariantDataInfo dInfoKey(node->keyInParent);
-        if (dInfoKey.isAtomic()) {
-            bool parentUpdatable = true;
-
-            // editable only if the direct parent can update keys
-            QMutableVariantDataInfo mutDInfoDirectParent(node->parent->value);
-            Q_ASSERT(mutDInfoDirectParent.isContainer());
-            parentUpdatable = mutDInfoDirectParent.editableKeys();
-
-            if (parentUpdatable == false)
-                return flags;
-
-            node = node->parent;
-
-            // editable only if all the parents can update values
-            // (from the node parent)
-            while (node->parent != nullptr && parentUpdatable) {
-                QMutableVariantDataInfo mutDInfoParent(node->parent->value);
-                Q_ASSERT(mutDInfoParent.isContainer());
-                parentUpdatable = mutDInfoParent.editableValues();
-                node = node->parent;
-            }
-
-            // if no parent or all parents are editable
-            if (parentUpdatable) {
-                flags |= Qt::ItemIsEditable;
-            }
-        }
-    }
-    else if (index.column() == column(ValueColumn)) {
-        // if value is not valid, the value cannot be edited
-        if (node->value.isValid() == false)
-            return flags;
-
-        // value should be atomic
-        if (mutDInfo.isAtomic()) {
-            // editable only if all the parents can update values
-            bool parentUpdatable = true;
-            while (node->parent != nullptr && parentUpdatable) {
-                QMutableVariantDataInfo mutDInfoParent(node->parent->value);
-                Q_ASSERT(mutDInfoParent.isContainer());
-                parentUpdatable = mutDInfoParent.editableValues();
-                node = node->parent;
-            }
-
-            // if no parent or all parents are editable
-            if (parentUpdatable) {
-                flags |= Qt::ItemIsEditable;
-            }
-        }
-    }
-    else if (index.column() == column(TypeColumn)) {
-        // even if the value is not valid, we can edit the type
-        flags |= Qt::ItemIsEditable;
-    }
+    if (index.column() == column(KeyColumn))
+        return node->cache.key.flags;
+    else if (index.column() == column(ValueColumn))
+        return node->cache.value.flags;
+    else if (index.column() == column(TypeColumn))
+        return node->cache.type.flags;
 
     return flags;
 }
@@ -598,7 +617,7 @@ QVariant QVariantModel::headerData(int section,
                 return tr("Data type");
         }
     }
-    else {
+    else { // if (orientation == Qt::Vertical)
         if (role == Qt::DisplayRole)
             return section;
     }
@@ -618,25 +637,24 @@ QVariant QVariantModel::data(const QModelIndex& index, int role) const
     node_t* hidden_root = mp_root.data();
     Q_ASSERT((node->parent != nullptr) ^ (node == hidden_root));
 
-    // special case: node is loading hint node
-    if (node == node->parent->hintNode) {
-        if (role == Qt::DisplayRole)
-            return tr("Loading datas...");
-        else if (role == Qt::ToolTipRole) {
-            node_t* pnode = node->parent;
-            QVariantDataInfo parentDInfo(pnode->value);
-            int totalCount = parentDInfo.containerCount();
-            int loadedCount = pnode->visibleChildren.count();
-            return tr("Loaded %1 / %2").arg(loadedCount).arg(totalCount);
-        }
-    }
-    else if (role == Qt::DisplayRole) {
+#ifdef QVM_DEBUG_DATA
+    qDebug() << "data" << index.row() << index.column() << role
+             << " key:" << keyPath(node)
+             << (node == node->parent->hintNode ? "hintNode" : "\0");
+#ifdef QVM_DEBUG_CACHE
+    qDebug().nospace() << "cache text key:" << node->cache.key.text
+                       << " value:" << node->cache.value.text
+                       << " type:" << node->cache.type.text;
+#endif // QVM_DEBUG_CACHE
+#endif // QVM_DEBUG_DATA
+
+    if (role == Qt::DisplayRole) {
         if (index.column() == column(KeyColumn))
-            return QVariantDataInfo(node->keyInParent).displayText();
+            return node->cache.key.text;
         else if (index.column() == column(ValueColumn))
-            return QVariantDataInfo(node->value).displayText(m_depth);
+            return node->cache.value.text;
         else if (index.column() == column(TypeColumn))
-            return node->value.typeName();
+            return node->cache.type.text;
     }
     else if (role == Qt::EditRole) {
         if (index.column() == column(KeyColumn))
@@ -915,6 +933,29 @@ int QVariantModel::column(Column column) const
 //    return dataRemoved;
 //}
 
+//------------------------------------------------------------------------------
+
+QModelIndex QVariantModel::createIndex(int row, int column, node_t* node) const
+{
+    Q_ASSERT((node == nullptr) ^ (node != mp_root.data()));
+    return QAbstractItemModel::createIndex(row, column, node);
+}
+
+//------------------------------------------------------------------------------
+
+void QVariantModel::setDisplayDepth(uint depth)
+{
+    if (m_depth == depth)
+        return;
+
+    m_depth = depth;
+    emit displayDepthChanged(m_depth);
+
+    recachedTree(mp_root.data(), CacheText);
+    dumpTree();
+    dumpTreeCache();
+    dumpModel();
+}
 
 //------------------------------------------------------------------------------
 
@@ -1236,13 +1277,36 @@ bool QVariantModel::isFilterEnabled() const
 void QVariantModel::dumpTree(const node_t* root,
                              const QString& prefix) const
 {
-    if (root == nullptr)
+#ifdef QVARIANTMODEL_DEBUG
+    if (root == nullptr) {
         root = mp_root.data();
-
-#if defined(QT_DEBUG) && defined(QVARIANTMODEL_DEBUG)
-    qDebug().nospace() << (prefix + DBG_NODE(root));
+        qDebug().nospace() << (prefix + "node(root)");
+    }
+    else {
+        qDebug().nospace() << DBG_NODE(prefix, root);
+    }
     foreach(node_t* child, root->visibleChildren)
         dumpTree(child, prefix + "--");
+#else
+    Q_UNUSED(root)
+    Q_UNUSED(prefix)
+#endif
+}
+
+void QVariantModel::dumpTreeCache(const node_t* root,
+                                  const QString& prefix) const
+{
+#ifdef QVARIANTMODEL_DEBUG
+    if (root == nullptr) {
+        root = mp_root.data();
+        qDebug().nospace() << (prefix + "node(root)");
+    }
+    else {
+        // qDebug().nospace() << (prefix + DBG_NODE(root));
+        qDebug().nospace() << DBG_NODE_CACHE(prefix, root);
+    }
+    foreach(node_t* child, root->visibleChildren)
+        dumpTreeCache(child, prefix + "--");
 #else
     Q_UNUSED(root)
     Q_UNUSED(prefix)
@@ -1252,7 +1316,7 @@ void QVariantModel::dumpTree(const node_t* root,
 void QVariantModel::dumpModel(const QModelIndex& rootIndex,
                               const QString& prefix) const
 {
-#if defined(QT_DEBUG) && defined(QVARIANTMODEL_DEBUG)
+#ifdef QVARIANTMODEL_DEBUG
     if (rootIndex.isValid()) {
         QModelIndex indexKey = index(rootIndex.row(),
                                      column(KeyColumn),
@@ -1265,13 +1329,16 @@ void QVariantModel::dumpModel(const QModelIndex& rootIndex,
                                       rootIndex.parent());
 
         qDebug().nospace() << (prefix
-                               + "index(key=\""
+                               + "index(TEXT: key="
                                + data(indexKey, Qt::DisplayRole).toString()
-                               + "\", value=\""
+                               + ", value="
                                + data(indexValue, Qt::DisplayRole).toString()
-                               + "\", type=\""
-                               + data(indexType, Qt::DisplayRole).toString()
-                               + "\")");
+                               + ", type="
+                               + data(indexType, Qt::DisplayRole).toString())
+                           << "; FLAGS: key=" << flags(indexKey)
+                           << ", value=" << flags(indexValue)
+                           << ", type=" << flags(indexType)
+                           << ")";
     }
     else {
         qDebug().nospace() << (prefix + "index(invalid)");
@@ -1289,7 +1356,7 @@ void QVariantModel::dumpModel(const QModelIndex& rootIndex,
 
 QVariantModelDataLoader::QVariantModelDataLoader(node_t* root) :
     QRunnable(),
-    root(root),
+    node(root),
     mutex(QMutex::NonRecursive)
 {
     exclusive.isDone = false;
@@ -1299,7 +1366,9 @@ QVariantModelDataLoader::QVariantModelDataLoader(node_t* root) :
 
 void QVariantModelDataLoader::run()
 {
-    buildNode(root);
+    Q_ASSERT(node != nullptr);
+
+    buildNode();
 
     {
         QMutexLocker locker(&mutex);
@@ -1307,10 +1376,11 @@ void QVariantModelDataLoader::run()
     }
 }
 
-void QVariantModelDataLoader::buildNode(node_t* node)
+void QVariantModelDataLoader::buildNode()
 {
     Q_ASSERT(node);
     Q_ASSERT(node->isLoaded  == false);
+    // node can be tree root, so it can not have parent
 
     QVariantDataInfo dInfo(node->value);
     Q_ASSERT(dInfo.isContainer());
@@ -1344,8 +1414,10 @@ void QVariantModelDataLoader::buildNode(node_t* node)
         // if doesn't required to load something
         child->isLoaded = true;
         QVariantDataInfo childDInfo(child->value);
-        if (childDInfo.isContainer() && childDInfo.isEmptyContainer() == false)
+        if (childDInfo.isContainer() && childDInfo.isEmptyContainer() == false) {
             child->isLoaded = false;
+            Model::setLoadingHintNode(child, true);
+        }
 
 #ifdef QVM_DEBUG_BUILD
         if (newChildren.size() >= SprintBuildSize) {
@@ -1357,6 +1429,9 @@ void QVariantModelDataLoader::buildNode(node_t* node)
         }
         childrenCount++;
 #endif
+
+        // build child node cache
+        Model::cached(child, to_cache.displayDepth);
 
         // if we reached the commit amount
         if (newChildren.size() >= SprintBuildSize) {
@@ -1381,66 +1456,5 @@ void QVariantModelDataLoader::buildNode(node_t* node)
             << " key:" << rootKeyStr
             << " loaded: " << childrenCount
             << "/" << keysCount;
-#endif
-
-    // here: we create all children structure, but the model can not having got
-    // the last created children; this implies that `root->createdChildren` can
-    // still have some datas, so `root->children` might not reflect the full
-    // node content, and moreover, `root->children` might not even be ordered.
-    // As this is plausible, we have to looped endlessly through node's children
-    // in search of not loaded ones. As soon as with looped the entire
-    // collections without any not loaded nodes, we are done.
-    // In side of this, we do not set the loading flag here for the same reasons.
-
-    // second: we build recursively root's children
-    //    int rootChildrenOffset = 0;
-    //    bool isOneNotLoaded = true;
-    //    while (isOneNotLoaded) {
-    //        // we reset the flag that indicates we have to continue loading
-    //        isOneNotLoaded = false;
-
-    //        // gather next children for this loop
-    //        QList<node_t*> localChildren;
-    //        {
-    //            // we supposed `root->children` never shrink while building nodes
-    //            QMutexLocker locker(&mutex);
-
-    //            // get nodes from already integrated nodes (and may be chown)
-    //            int extractionCount = qBound(
-    //                        0, root->children.count() - rootChildrenOffset,
-    //                        (int)ChildrenSprintSize);
-    //            localChildren = root->children.mid(
-    //                        rootChildrenOffset, extractionCount);
-
-    //            // get nodes not yet integrated nodes
-    //            extractionCount = qBound(
-    //                        0, root->createdChildren.count() - (rootChildrenOffset + localChildren.count() - root->children.count()),
-    //                        (int)ChildrenSprintSize - localChildren.count());
-    //            localChildren.append(root->createdChildren.mid(
-    //                                     rootChildrenOffset + localChildren.count(),
-    //                                     extractionCount));
-
-    //            rootChildrenOffset += localChildren.count();
-
-    //            if (rootChildrenOffset >= root->children.count()
-    //                    + root->createdChildren.count())
-    //                rootChildrenOffset = 0;
-    //        }
-
-    //        // build children
-    //        for (auto it = localChildren.begin(); it != localChildren.end(); ++it) {
-    //            node_t* child = *it;
-    //            // if child must be build
-    //            if (child->isLoaded == false
-    //                    && child->createdChildren.isEmpty()) {
-    //                isOneNotLoaded = true;
-    //                buildNode(*it);
-    //            }
-    //        }
-    //    }
-
-#ifdef QVM_DEBUG_BUILD
-    qDebug().nospace()
-            << "build node key:" << rootKeyStr << " done";
 #endif
 }

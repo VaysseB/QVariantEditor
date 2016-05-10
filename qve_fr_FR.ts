@@ -92,7 +92,7 @@
 <context>
     <name>QMutableVariantDataInfo</name>
     <message>
-        <location filename="qvariantmodel/qvariantdatainfo.h" line="326"/>
+        <location filename="qvariantmodel/qvariantdatainfo.h" line="353"/>
         <source>key</source>
         <translation>clé</translation>
     </message>
@@ -166,31 +166,31 @@
         <translation>sans titre</translation>
     </message>
     <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="226"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="245"/>
         <source>Add new</source>
         <oldsource>Insert new</oldsource>
         <translation>Ajouter nouveau</translation>
     </message>
     <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="236"/>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="257"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="255"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="276"/>
         <source>Insert before</source>
         <translation>Insérer avant</translation>
     </message>
     <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="237"/>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="258"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="256"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="277"/>
         <source>Insert after</source>
         <translation>Insérer après</translation>
     </message>
     <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="238"/>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="259"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="257"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="278"/>
         <source>Remove</source>
         <translation>Supprimer</translation>
     </message>
     <message>
-        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="256"/>
+        <location filename="qtreevariantwidget/qtreevariantwidget.cpp" line="275"/>
         <source>Insert into</source>
         <translation>Insérer dedans</translation>
     </message>
@@ -198,17 +198,42 @@
 <context>
     <name>QVariantModel</name>
     <message>
-        <location filename="qvariantmodel/qvariantmodel.cpp" line="289"/>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="25"/>
+        <source>Contains</source>
+        <translation>Contiens</translation>
+    </message>
+    <message>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="26"/>
+        <source>Wildcard</source>
+        <translation>Wildcard</translation>
+    </message>
+    <message>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="27"/>
+        <source>Regex</source>
+        <translation>Expression</translation>
+    </message>
+    <message>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="28"/>
+        <source>Fixed</source>
+        <translation>Fixe</translation>
+    </message>
+    <message>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="104"/>
+        <source>Data loading...</source>
+        <translation>Chargement de données...</translation>
+    </message>
+    <message>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="613"/>
         <source>Key / Index</source>
         <translation>Clé/Index</translation>
     </message>
     <message>
-        <location filename="qvariantmodel/qvariantmodel.cpp" line="291"/>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="615"/>
         <source>Value</source>
         <translation>Valeur</translation>
     </message>
     <message>
-        <location filename="qvariantmodel/qvariantmodel.cpp" line="293"/>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="617"/>
         <source>Data type</source>
         <translation>Type de données</translation>
     </message>

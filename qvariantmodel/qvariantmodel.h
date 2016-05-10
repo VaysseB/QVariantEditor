@@ -29,6 +29,19 @@ class QVariantModel : public QAbstractItemModel
         SizeLimitToLoadAsync = 200
     };
 
+    struct cache_row_t {
+        Qt::ItemFlags flags = 0;
+        QString text;
+    };
+
+    enum CacheRole {
+        NoCache = 0,
+        CacheText = 1,
+        CacheFlags = 2,
+        FullCache
+    };
+    Q_DECLARE_FLAGS(CacheRoles, CacheRole)
+
     struct node_t {
         QVariant value;
 
@@ -39,6 +52,12 @@ class QVariantModel : public QAbstractItemModel
         QList<node_t*> children;
         QList<node_t*> visibleChildren;
         bool visible = false;
+
+        struct {
+            struct cache_row_t key;
+            struct cache_row_t value;
+            struct cache_row_t type;
+        } cache;
 
         // lazing loading
         bool isLoaded = true;
@@ -96,9 +115,9 @@ public:
 
     // model datas
     QVariant data(const QModelIndex& index, int role) const;
-//    bool setData(const QModelIndex& index, const QVariant& value, int role);
-//    bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex());
-//    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex());
+    //    bool setData(const QModelIndex& index, const QVariant& value, int role);
+    //    bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex());
+    //    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex());
 
     // model data loading
     void fetchMore(const QModelIndex &parent);
@@ -137,21 +156,31 @@ protected:
     virtual bool filterType(int type) const;
     virtual bool filterOnDisplayText(const QString& text) const;
 
-//    void invalidateSubTree(QModelIndex index);
+    //    void invalidateSubTree(QModelIndex index);
 
 private:
-//    void buildNode(node_t *node);
-    void invalidateOrder(node_t* node, int start = 0, int length = -1);
+    QModelIndex createIndex(int row, int column, node_t* node) const;
+
+    void loadNode(const QModelIndex &parent,
+                  node_t* pnode,
+                  bool canModifyModel = true);
     static void setLoadingHintNode(node_t *node, bool enable);
+    static void invalidateOrder(node_t* node, int start = 0, int length = -1);
+    static void cached(node_t* node,
+                       int textDepth,
+                       CacheRoles roles = FullCache); // build cache
+    void recachedTree(node_t* pnode,
+                      CacheRoles roles = FullCache); // rebuild cache text
+
     static void clearChildren(node_t* node, int reserveSize = 0);
     static QString keyPath(const node_t* node);
 
-    QModelIndex indexOfNode(node_t* node, int column) const;
-    QModelIndex indexOfNode(node_t* node, Column col = KeyColumn) const;
+    QModelIndex indexForNode(node_t* node, int column) const;
+    QModelIndex indexForNode(node_t* node, Column col = KeyColumn) const;
 
     void updateFilterRx(QString pattern);
 
-//    void sortTree(node_t& root, InternalSortStrategy sortStrategy);
+    //    void sortTree(node_t& root, InternalSortStrategy sortStrategy);
 
     bool isFilterEnabled() const;
     void filterTree(node_t* root, InternalSortPolicy sortPolicy = DynamicSortPolicy);
@@ -159,6 +188,8 @@ private:
 
     void dumpTree(const node_t *root = nullptr,
                   const QString& prefix = QString()) const;
+    void dumpTreeCache(const node_t *root = nullptr,
+                       const QString& prefix = QString()) const;
     void dumpModel(const QModelIndex& rootIndex = QModelIndex(),
                    const QString& prefix = QString()) const;
 
@@ -187,13 +218,13 @@ class QVariantModelDataLoader : public QRunnable
     };
 
 public:
-    QVariantModelDataLoader(node_t* root);
+    QVariantModelDataLoader(node_t* node);
 
     void run();
 
-    void buildNode(node_t* node);
+    void buildNode();
 
-    node_t* root;
+    node_t* node;
     QMutex mutex; // mutex for `createdChildren` and `isDone`
 
     struct {
@@ -201,7 +232,11 @@ public:
         bool isDone;
     } exclusive;
 
-//    bool stopAndDiscardAsked = false;
+    struct {
+        int displayDepth = 0;
+    } to_cache;
+
+    //    bool stopAndDiscardAsked = false;
 };
 
 #endif // QVARIANTMODEL_H
