@@ -12,13 +12,13 @@
 
 
 #ifdef QVARIANTMODEL_DEBUG
-//#define QVM_DEBUG_MODEL_FUNC // index(), hasChildren(), rowCount()
-//#define QVM_DEBUG_DATA // flags(), data()
-//#define QVM_DEBUG_LOAD // canFetchMore(), loadNode()
+#define QVM_DEBUG_MODEL_FUNC // index(), hasChildren(), rowCount()
+#define QVM_DEBUG_DATA // flags(), data()
+#define QVM_DEBUG_LOAD // canFetchMore(), loadNode()
 //#define QVM_DEBUG_BUILD // buildNode()
 //#define QVM_DEBUG_FILTER // isAcceptedNode()
 //#define QVM_DEBUG_CACHE // cached(), recachedTree(), flags(), data()
-//#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filterTree() calls
+#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filterTree() calls
 #endif
 
 
@@ -36,9 +36,12 @@ class QVariantModel : public QAbstractItemModel
 
     friend class QVariantModelDataLoader;
 
+    // helpers to add meaning into the code
     enum {
-        SizeLimitToLoadAsync = 200,
-        NoChangedSignalsEmitted = 0
+        NoChangedSignalsEmitted = 0, // used as bool
+        EmitChangedSignals = 1, // used as bool
+        SizeLimitToLoadAsync = 200, // used as int
+        SizeLimitBetterResetWhenDataChanged = 500 // used as int
     };
 
     struct cache_row_t {
@@ -73,8 +76,10 @@ class QVariantModel : public QAbstractItemModel
 
         // lazing loading
         bool loaded = true;
-        node_t* hintNode = nullptr; // dummy to show hint
+        node_t* hintNode = nullptr; // dummy to show loading hint
         QVariantModelDataLoader* loader = nullptr;
+        // at any time (1/2): loaded == false && hintNode != nullptr
+        // at any time (2/2): loaded == true && hintNode == nullptr
     };
 
     enum InternalSortPolicy {
