@@ -54,7 +54,6 @@ public:
      * @see containerValue
      */
     QList<QVariant> containerKeys() const;
-    QList<QVariant> containerPartKeys(int start, int count) const;
     /**
      * @brief Extract the data of the key from the container.
      * The data must be a container.
@@ -247,18 +246,6 @@ struct index_collection_t {
         return l;
     }
 
-    QList<QVariant> partKeys(int start, int count) const
-    {
-        int totalCount = c.count();
-        Q_ASSERT(start + count <= totalCount);
-        QList<QVariant> l;
-        count += start;
-        for (int i = start; i < count; i++)
-            l.append(QVariant(i));
-        return l;
-    }
-
-
     QString displayText(int depth) const
     {
         QStringList items;
@@ -285,13 +272,6 @@ struct associative_collection_t {
             l.append(QVariant::fromValue(it.key()));
         std::sort(l.begin(), l.end());
         return l;
-    }
-
-    QList<QVariant> partKeys(int start, int count) const
-    {
-        int totalCount = c.count();
-        Q_ASSERT(start + count <= totalCount);
-        return keys().mid(start, count);
     }
 
     QString displayText(int depth) const

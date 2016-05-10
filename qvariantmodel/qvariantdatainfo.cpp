@@ -109,7 +109,7 @@ bool QVariantDataInfo::isContainer() const
 bool QVariantDataInfo::isEmptyContainer() const
 {
     Q_ASSERT(isContainer());
-    bool empty;
+    bool empty = true;
 
     // we handle only a reduced number
     switch(m_cdata.type())
@@ -133,7 +133,7 @@ bool QVariantDataInfo::isEmptyContainer() const
 int QVariantDataInfo::containerCount() const
 {
     Q_ASSERT(isContainer());
-    int count;
+    int count = 0;
 
     // we handle only a reduced number
     switch(m_cdata.type())
@@ -170,31 +170,6 @@ QList<QVariant> QVariantDataInfo::containerKeys() const
         break;
     case QVariant::Map:
         keys = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toMap()).keys();
-        break;
-    default:
-        break;
-    }
-
-    return keys;
-}
-
-QList<QVariant> QVariantDataInfo::containerPartKeys(int start, int count) const
-{
-    Q_ASSERT(isContainer());
-    Q_ASSERT(start >= 0 && count > 0);
-    QList<QVariant> keys;
-
-    // we handle only a reduced number
-    switch(m_cdata.type())
-    {
-    case QVariant::List:
-        keys = QtPrivate::VariantDataInfo::IndexCollection(m_cdata.toList()).partKeys(start, count);
-        break;
-    case QVariant::Hash:
-        keys = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toHash()).partKeys(start, count);
-        break;
-    case QVariant::Map:
-        keys = QtPrivate::VariantDataInfo::AssociativeCollection(m_cdata.toMap()).partKeys(start, count);
         break;
     default:
         break;
