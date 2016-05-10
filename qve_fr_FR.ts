@@ -92,7 +92,7 @@
 <context>
     <name>QMutableVariantDataInfo</name>
     <message>
-        <location filename="qvariantmodel/qvariantdatainfo.h" line="353"/>
+        <location filename="qvariantmodel/qvariantdatainfo.h" line="333"/>
         <source>key</source>
         <translation>clé</translation>
     </message>
@@ -178,42 +178,42 @@
 <context>
     <name>QVariantModel</name>
     <message>
-        <location filename="qvariantmodel/qvariantmodel.cpp" line="25"/>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="16"/>
         <source>Contains</source>
         <translation>Contiens</translation>
     </message>
     <message>
-        <location filename="qvariantmodel/qvariantmodel.cpp" line="26"/>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="17"/>
         <source>Wildcard</source>
         <translation>Wildcard</translation>
     </message>
     <message>
-        <location filename="qvariantmodel/qvariantmodel.cpp" line="27"/>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="18"/>
         <source>Regex</source>
         <translation>Expression</translation>
     </message>
     <message>
-        <location filename="qvariantmodel/qvariantmodel.cpp" line="28"/>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="19"/>
         <source>Fixed</source>
         <translation>Fixe</translation>
     </message>
     <message>
-        <location filename="qvariantmodel/qvariantmodel.cpp" line="104"/>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="95"/>
         <source>Data loading...</source>
         <translation>Chargement de données...</translation>
     </message>
     <message>
-        <location filename="qvariantmodel/qvariantmodel.cpp" line="613"/>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="633"/>
         <source>Key / Index</source>
         <translation>Clé/Index</translation>
     </message>
     <message>
-        <location filename="qvariantmodel/qvariantmodel.cpp" line="615"/>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="635"/>
         <source>Value</source>
         <translation>Valeur</translation>
     </message>
     <message>
-        <location filename="qvariantmodel/qvariantmodel.cpp" line="617"/>
+        <location filename="qvariantmodel/qvariantmodel.cpp" line="637"/>
         <source>Data type</source>
         <translation>Type de données</translation>
     </message>

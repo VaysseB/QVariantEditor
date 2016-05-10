@@ -45,9 +45,9 @@ void QVariantModel::setRootDatas(const QVariantList &rootDatas)
 
     mp_root->value = rootDatas;
     mp_root->parent = nullptr;
-    mp_root->isLoaded = rootDatas.isEmpty();
+    mp_root->loaded = rootDatas.isEmpty();
 
-    if (mp_root->isLoaded == false)
+    if (mp_root->loaded == false)
         loadNode(QModelIndex(), mp_root.data(), false);
 
     endResetModel();
@@ -85,7 +85,7 @@ void QVariantModel::setLoadingHintNode(node_t *node, bool enable)
     else if (node->hintNode == nullptr && enable) {
         node->hintNode = new node_t;
         node->hintNode->parent = node;
-        node->hintNode->isLoaded = true;
+        node->hintNode->loaded = true;
 
         Qt::ItemFlags fls = Qt::ItemIsSelectable | Qt::ItemIsEnabled;
         node->hintNode->cache.key.flags = fls;
@@ -273,7 +273,7 @@ void QVariantModel::loadNode(const QModelIndex& parent,
                              bool canModifyModel)
 {
     Q_ASSERT(pnode != nullptr);
-    Q_ASSERT(pnode->isLoaded == false);
+    Q_ASSERT(pnode->loaded == false);
 
     node_t* hidden_root = mp_root.data();
     Q_UNUSED(hidden_root); // avoid warning if no assert
@@ -344,7 +344,7 @@ void QVariantModel::loadNode(const QModelIndex& parent,
 
             // beware of this line: `isLoaded == false` supposed the hint node
             // is visible and thus 1 is added to rowCount() in this case
-            pnode->isLoaded = true;
+            pnode->loaded = true;
 
             if (canModifyModel)
                 beginInsertRows(parent, 0, count-1);
@@ -361,7 +361,7 @@ void QVariantModel::loadNode(const QModelIndex& parent,
 #ifdef QVM_DEBUG_CHANGE_MODEL
             qDebug() << "begin filter"
                      << keyPath(pnode)
-                     << (isFilterEnabled() ? "clear" : "select")
+                     << (isFilterEnabled() ? "select" : "clear")
                      << FILTER_TYPE_NAMES[m_filterType]
                         << m_filterRx.pattern();
 #endif
@@ -394,7 +394,7 @@ void QVariantModel::loadNode(const QModelIndex& parent,
 
                 // end loading state if done
                 if (pnode->loader->exclusive.isDone) {
-                    pnode->isLoaded = true;
+                    pnode->loaded = true;
 
 #ifdef QVM_DEBUG_LOAD
                     qDebug().nospace()
@@ -426,7 +426,7 @@ void QVariantModel::loadNode(const QModelIndex& parent,
 #ifdef QVM_DEBUG_CHANGE_MODEL
                 qDebug() << "begin filter"
                          << keyPath(pnode)
-                         << (isFilterEnabled() ? "clear" : "select")
+                         << (isFilterEnabled() ? "select" : "clear")
                          << FILTER_TYPE_NAMES[m_filterType]
                             << m_filterRx.pattern();
 #endif
@@ -440,7 +440,7 @@ void QVariantModel::loadNode(const QModelIndex& parent,
 
     // if node is loaded, we delete the loader
     // but we delete it here because we mustn't delete a locked mutex
-    if (pnode->isLoaded && pnode->loader != nullptr) {
+    if (pnode->loaded && pnode->loader != nullptr) {
         delete pnode->loader;
         pnode->loader = nullptr;
     }
@@ -453,7 +453,7 @@ void QVariantModel::fetchMore(const QModelIndex &parent)
         pnode = static_cast<node_t*>(parent.internalPointer());
     Q_ASSERT(pnode != nullptr);
 
-    if (pnode->isLoaded == false)
+    if (pnode->loaded == false)
         loadNode(parent, pnode);
 }
 
@@ -471,7 +471,7 @@ bool QVariantModel::canFetchMore(const QModelIndex &parent) const
             << " fetch more:" << (!pnode->isLoaded);
 #endif
 
-    return !pnode->isLoaded;
+    return !pnode->loaded;
 }
 
 //------------------------------------------------------------------------------
@@ -515,7 +515,7 @@ QModelIndex QVariantModel::index(int row, int column,
 
 
     // if node not fully loaded AND want the last children -> return hint node
-    if (pnode->isLoaded == false && row == pnode->visibleChildren.count()) {
+    if (pnode->loaded == false && row == pnode->visibleChildren.count()) {
         Q_ASSERT(pnode->hintNode != nullptr); // cannot be null, it is nonsense
         return createIndex(row, column, pnode->hintNode);
     }
@@ -554,7 +554,7 @@ bool QVariantModel::hasChildren(const QModelIndex& parent) const
 #endif
 
     // if the node is fully loaded, we check the real children number
-    if (pnode->isLoaded)
+    if (pnode->loaded)
         return !pnode->visibleChildren.isEmpty();
     // we know that not loaded node are futur parents
     return true;
@@ -576,7 +576,7 @@ int QVariantModel::rowCount(const QModelIndex& parent) const
 
     int count = pnode->visibleChildren.count();
     // if still loading, add a loading hint node
-    if (pnode->isLoaded == false)
+    if (pnode->loaded == false)
         count++;
     return count;
 }
@@ -1081,13 +1081,6 @@ bool QVariantModel::lessThan(const QVariant& left, const QVariant& right) const
 
 void QVariantModel::updateFilterRx(QString pattern)
 {
-    if (pattern.isEmpty() == false) {
-        if (!pattern.startsWith("*") && m_filterType == WildCard)
-            pattern.prepend(QChar('*'));
-        if (!pattern.endsWith("*") && m_filterType == WildCard)
-            pattern.append(QChar('*'));
-    }
-
     m_filterRx = QRegExp(pattern, Qt::CaseSensitive,
                          (m_filterType == WildCard)
                          ? QRegExp::WildcardUnix : QRegExp::RegExp2);
@@ -1110,7 +1103,7 @@ void QVariantModel::setFilterType(FilterType filterType)
 #ifdef QVM_DEBUG_CHANGE_MODEL
         qDebug() << "begin filter"
                  << keyPath(mp_root.data())
-                 << (isFilterEnabled() ? "clear" : "select")
+                 << (isFilterEnabled() ? "select" : "clear")
                  << FILTER_TYPE_NAMES[m_filterType]
                     << m_filterRx.pattern();
 #endif
@@ -1140,7 +1133,7 @@ void QVariantModel::setFilterColumns(Columns filterColumns)
 #ifdef QVM_DEBUG_CHANGE_MODEL
         qDebug() << "begin filter"
                  << keyPath(mp_root.data())
-                 << (isFilterEnabled() ? "clear" : "select")
+                 << (isFilterEnabled() ? "select" : "clear")
                  << FILTER_TYPE_NAMES[m_filterType]
                     << m_filterRx.pattern();
 #endif
@@ -1170,7 +1163,7 @@ void QVariantModel::setFilterText(const QString& filterText)
 #ifdef QVM_DEBUG_CHANGE_MODEL
         qDebug() << "begin filter"
                  << keyPath(mp_root.data())
-                 << (isFilterEnabled() ? "clear" : "select")
+                 << (isFilterEnabled() ? "select" : "clear")
                  << FILTER_TYPE_NAMES[m_filterType]
                     << m_filterRx.pattern();
 #endif
@@ -1184,39 +1177,100 @@ void QVariantModel::setFilterText(const QString& filterText)
     }
 }
 
-bool QVariantModel::filterKey(const QVariant& key) const
+bool QVariantModel::filterKeyColumn(const QString& cacheKey,
+                                    const QVariant& key,
+                                    bool nodeLoaded) const
 {
-    const QString text = QVariantDataInfo(key).displayText();
-    return filterOnDisplayText(text);
+    Q_UNUSED(cacheKey);
+    // if the node is loaded, we just look at the level of the node, not deeper
+    if (nodeLoaded) {
+        // we build the minimum key representation to test
+        const QString& text = QVariantDataInfo(key).displayText(1);
+        return filterText(text);
+    }
+    return filterData(key);
 }
 
-bool QVariantModel::filterValue(const QVariant& value) const
+bool QVariantModel::filterValueColumn(const QString& cacheValue,
+                                      const QVariant& value,
+                                      bool nodeLoaded) const
 {
-    const QString text = QVariantDataInfo(value).displayText(m_depth);
-    return filterOnDisplayText(text);
+    Q_UNUSED(cacheValue);
+    // if the node is loaded, we just look at the level of the node, not deeper
+    if (nodeLoaded) {
+        // we build the minimum value representation to test
+        const QString& text = QVariantDataInfo(value).displayText(1);
+        return filterText(text);
+    }
+    return filterData(value);
 }
 
-bool QVariantModel::filterType(int type) const
+bool QVariantModel::filterTypeColumn(const QString& cacheType,
+                                     int type,
+                                     bool nodeLoaded) const
 {
-    const QString text = QVariant::typeToName(type);
-    return filterOnDisplayText(text);
+    Q_UNUSED(type);
+    Q_UNUSED(nodeLoaded);
+    return filterText(cacheType);
 }
 
-bool QVariantModel::filterOnDisplayText(const QString& text) const
+bool QVariantModel::filterText(const QString& text) const
 {
     bool isRowOk = false;
 
-    if (m_filterType == Contains)
+    switch (m_filterType)
+    {
+    case QVariantModel::Contains:
         isRowOk = text.contains(m_filterRx.pattern());
-    else if (m_filterType == WildCard || m_filterType == Regex)
+        break;
+    case QVariantModel::WildCard:
+        isRowOk = m_filterRx.indexIn(text) >= 0;
+        break;
+    case QVariantModel::Regex:
         isRowOk = m_filterRx.exactMatch(text);
-    else if (m_filterType == Fixed)
-        isRowOk = (text == m_filterRx.pattern());
+        break;
+    case QVariantModel::Fixed:
+        isRowOk = (text.compare(m_filterRx.pattern(), Qt::CaseInsensitive) == 0);
+        break;
+
+    }
 
     return isRowOk;
 }
 
-bool QVariantModel::isAcceptedNode(node_t *root) const
+bool QVariantModel::filterData(const QVariant& value) const
+{
+    QVariantDataInfo dInfo(value);
+
+    if (dInfo.isContainer()) {
+        bool isVisible = false;
+
+        // deep search on each keys and values
+        // until we find the first visible element
+        QVariantList keys = dInfo.containerKeys();
+        for (auto it = keys.constBegin(); it != keys.constEnd()
+             && isVisible == false; ++it) {
+            QVariant key = *it;
+            isVisible = filterData(key);
+            // if key is not accepted
+            if (isVisible == false) {
+                QVariant value = dInfo.containerValue(key);
+                isVisible = filterData(value);
+            }
+        }
+
+        return isVisible;
+    }
+
+    // here, we don't know if value is atomic and we don't bother, because the
+    // value cannot be a group of other values, so we know that its
+    // representation as string will reflect the value content,
+    // so it is testable
+    const QString& text = dInfo.displayText(1);
+    return filterText(text);
+}
+
+bool QVariantModel::isAcceptedNode(node_t *node) const
 {
     bool isVisible = false;
 
@@ -1224,16 +1278,25 @@ bool QVariantModel::isAcceptedNode(node_t *root) const
     bool vkey = m_filterColumns & ValueColumn;
     bool tkey = m_filterColumns & TypeColumn;
 
-    isVisible |= (fkey && filterKey(root->keyInParent));
-    isVisible |= (vkey && filterValue(root->value));
-    isVisible |= (tkey && filterType(root->value.userType()));
+    isVisible |= (fkey && filterKeyColumn(node->cache.key.text,
+                                          node->keyInParent,
+                                          node->loaded));
+    isVisible |= (vkey && filterValueColumn(node->cache.value.text,
+                                            node->value,
+                                            node->loaded));
+    isVisible |= (tkey && filterTypeColumn(node->cache.type.text,
+                                           node->value.userType(),
+                                           node->loaded));
 
 #ifdef QVM_DEBUG_FILTER
-    qDebug() << (QString("filter node content with ")
-                 + m_filterRx.pattern()
-                 + " "
-                 + DBG_NODE(root)
-                 + (isVisible ? " => visible" : " => hidden"));
+    qDebug() << "filter node content with"
+             << FILTER_TYPE_NAMES[m_filterType]
+                << m_filterRx.pattern()
+                << (fkey ? "KeyColumn" : "\0")
+                << (vkey ? "ValueColumn" : "\0")
+                << (tkey ? "TypeColumn" : "\0")
+                << DBG_NODE("", node)
+                << (isVisible ? " => visible" : " => hidden");
 #endif
 
     return isVisible;
@@ -1244,65 +1307,73 @@ bool QVariantModel::isFilterEnabled() const
     return !m_filterRx.pattern().isEmpty();
 }
 
-void QVariantModel::filterTree(node_t* root, bool canModifyModel)
+void QVariantModel::filterTree(node_t* node, bool canModifyModel)
 {
-    Q_ASSERT(root);
+    Q_ASSERT(node);
 
     // actual filter
     if (isFilterEnabled()) {
-        if (root == mp_root.data()) {
+        if (node == mp_root.data()) {
             if (canModifyModel)
                 beginResetModel();
         }
 
-        bool wasVisible = root->visible;
-        if (root->parent)
-            Q_ASSERT(wasVisible == root->parent->visibleChildren.contains(root));
-
-        // filter children
-        for (auto itChild = root->children.begin();
-             itChild != root->children.end(); ++itChild) {
-            filterTree(*itChild, canModifyModel);
+        // filter children if loaded
+        // or filter data if not (see this later)
+        if (node->loaded) {
+            for (auto itChild = node->children.begin();
+                 itChild != node->children.end(); ++itChild) {
+                filterTree(*itChild, canModifyModel);
+            }
         }
 
-        // if no children to show -> don't show if the node itself is filtered
-        root->visible = (!root->visibleChildren.isEmpty());
-        if (root->visible == false)
-            root->visible = isAcceptedNode(root);
+        // if we don't have any parent, we can not hide, so we don't even
+        // test if we can be visible
+        if (node->parent) {
+            bool wasVisible = node->visible;
+            Q_ASSERT(wasVisible == node->parent->visibleChildren.contains(node));
 
-        if (root->parent) {
+            // if no children to show -> don't show if the node itself
+            // is not accepted (only if loaded
+            node->visible = (node->loaded) ? (!node->visibleChildren.isEmpty())
+                                           : false;
+            if (node->visible == false)
+                node->visible = isAcceptedNode(node);
+
             // if appeared
-            if (root->visible && !wasVisible) {
-                Q_ASSERT(root->parent->visibleChildren.contains(root) == false);
-                int insertPos = root->parent->children.indexOf(root);
+            if (node->visible && !wasVisible) {
+                Q_ASSERT(node->parent->visibleChildren.contains(node) == false);
+                int insertPos = qBound(0, node->parent->children.indexOf(node),
+                                       node->parent->visibleChildren.count());
 
                 //                if (canModifyModel) {
                 //                    QModelIndex parent = indexOfNode(root->parent);
                 //                    beginInsertRows(parent, insertPos, insertPos);
                 //                }
 
-                root->parent->visibleChildren.insert(insertPos, root);
+                node->parent->visibleChildren.insert(insertPos, node);
+                node->visible = true;
 
                 //                if (canModifyModel)
                 //                    endInsertRows();
             }
             // if disappeared
-            else if (!root->visible && wasVisible) {
-                Q_ASSERT(root->parent->visibleChildren.contains(root));
+            else if (!node->visible && wasVisible) {
+                Q_ASSERT(node->parent->visibleChildren.contains(node));
 
                 //                if (canModifyModel) {
                 //                    QModelIndex index = indexOfNode(root);
                 //                    beginRemoveRows(index.parent(), index.row(), index.row());
                 //                }
 
-                root->parent->visibleChildren.removeOne(root);
+                node->parent->visibleChildren.removeOne(node);
 
                 //                if (canModifyModel)
                 //                    endRemoveRows();
             }
         }
 
-        if (root == mp_root.data()) {
+        if (node == mp_root.data()) {
             if (canModifyModel)
                 endResetModel();
         }
@@ -1310,21 +1381,21 @@ void QVariantModel::filterTree(node_t* root, bool canModifyModel)
     // display all
     else {
         // so much change, better reset than insert hidden row
-        if (root == mp_root.data()) {
+        if (node == mp_root.data()) {
             if (canModifyModel)
                 beginResetModel();
         }
 
         // filter children
-        for (auto itChild = root->children.begin();
-             itChild != root->children.end(); ++itChild) {
+        for (auto itChild = node->children.begin();
+             itChild != node->children.end(); ++itChild) {
             filterTree(*itChild, canModifyModel);
         }
 
-        root->visibleChildren = root->children;
-        root->visible = true;
+        node->visibleChildren = node->children;
+        node->visible = true;
 
-        if (root == mp_root.data()) {
+        if (node == mp_root.data()) {
             if (canModifyModel)
                 endResetModel();
         }
@@ -1535,7 +1606,7 @@ void QVariantModelDataLoader::run()
 void QVariantModelDataLoader::buildNode()
 {
     Q_ASSERT(node);
-    Q_ASSERT(node->isLoaded  == false);
+    Q_ASSERT(node->loaded  == false);
     // node can be tree root, so it can not have parent
 
     QVariantDataInfo dInfo(node->value);
@@ -1568,10 +1639,10 @@ void QVariantModelDataLoader::buildNode()
 
         // optimization: give the child loaded status as fully loaded
         // if doesn't required to load something
-        child->isLoaded = true;
+        child->loaded = true;
         QVariantDataInfo childDInfo(child->value);
         if (childDInfo.isContainer() && childDInfo.isEmptyContainer() == false) {
-            child->isLoaded = false;
+            child->loaded = false;
             Model::setLoadingHintNode(child, true);
         }
 

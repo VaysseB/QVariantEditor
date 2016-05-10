@@ -16,7 +16,7 @@
 //#define QVM_DEBUG_DATA // flags(), data()
 //#define QVM_DEBUG_LOAD // canFetchMore(), loadNode()
 //#define QVM_DEBUG_BUILD // buildNode()
-//#define QVM_DEBUG_FILTER // isAcceptedNode()
+#define QVM_DEBUG_FILTER // isAcceptedNode()
 //#define QVM_DEBUG_CACHE // cached(), recachedTree(), flags(), data()
 #define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filterTree() calls
 #endif
@@ -31,7 +31,7 @@ class QVariantModel : public QAbstractItemModel
     Q_PROPERTY(uint displayDepth READ displayDepth WRITE setDisplayDepth NOTIFY displayDepthChanged)
     Q_PROPERTY(bool dynamicSort READ dynamicSort WRITE setDynamicSort NOTIFY dynamicSortChanged)
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
-    Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
+    Q_PROPERTY(FilterType filterTypeColumn READ filterTypeColumn WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(Columns filterColumns READ filterColumns WRITE setFilterColumns NOTIFY filterColumnsChanged)
 
     friend class QVariantModelDataLoader;
@@ -71,7 +71,7 @@ class QVariantModel : public QAbstractItemModel
         } cache;
 
         // lazing loading
-        bool isLoaded = true;
+        bool loaded = true;
         node_t* hintNode = nullptr; // dummy to show hint
         QVariantModelDataLoader* loader = nullptr;
     };
@@ -138,7 +138,7 @@ public:
     QVariantList rootDatas() const;
     inline uint displayDepth() const { return m_depth; }
     inline bool dynamicSort() const { return m_dynamicSort; }
-    inline FilterType filterType() const { return m_filterType; }
+    inline FilterType filterTypeColumn() const { return m_filterType; }
     inline Columns filterColumns() const { return m_filterColumns; }
     inline QString filterText() const { return m_filterRx.pattern(); }
 
@@ -148,7 +148,7 @@ signals:
     void rootDatasChanged();
     void displayDepthChanged(uint depth);
     void dynamicSortChanged(bool enabled);
-    void filterTypeChanged(FilterType filterType);
+    void filterTypeChanged(FilterType filterTypeColumn);
     void filterColumnsChanged(Columns filterColumns);
     void filterTextChanged(const QString& filterText);
 
@@ -156,16 +156,23 @@ public slots:
     void setRootDatas(const QVariantList& rootDatas);
     void setDisplayDepth(uint depth);
     void setDynamicSort(bool enabled);
-    void setFilterType(FilterType filterType);
+    void setFilterType(FilterType filterTypeColumn);
     void setFilterColumns(Columns filterColumns);
     void setFilterText(const QString& filterText);
 
 protected:
     virtual bool lessThan(const QVariant& left, const QVariant& right) const;
-    virtual bool filterKey(const QVariant& key) const;
-    virtual bool filterValue(const QVariant& value) const;
-    virtual bool filterType(int type) const;
-    virtual bool filterOnDisplayText(const QString& text) const;
+    virtual bool filterText(const QString& text) const;
+    virtual bool filterData(const QVariant& value) const;
+    virtual bool filterKeyColumn(const QString& cacheKey,
+                           const QVariant& key,
+                           bool nodeLoaded) const;
+    virtual bool filterValueColumn(const QString& cacheValue,
+                             const QVariant& value,
+                             bool nodeLoaded) const;
+    virtual bool filterTypeColumn(const QString& cacheType,
+                            int type,
+                            bool nodeLoaded) const;
 
 
 #ifdef QVM_DEBUG_CHANGE_MODEL
@@ -207,8 +214,8 @@ private:
     //    void sortTree(node_t& root, InternalSortStrategy sortStrategy);
 
     bool isFilterEnabled() const;
-    void filterTree(node_t* root, bool canModifyModel = true);
-    bool isAcceptedNode(node_t* root) const;
+    bool isAcceptedNode(node_t* node) const;
+    void filterTree(node_t* node, bool canModifyModel = true);
 
     void dumpTree(const node_t *root = nullptr,
                   const QString& prefix = QString()) const;
