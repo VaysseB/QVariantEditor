@@ -6,15 +6,6 @@
 
 #include "qvariantdatainfo.h"
 
-#ifdef QVARIANTMODEL_DEBUG
-//#define QVM_DEBUG_MODEL_FUNC
-//#define QVM_DEBUG_DATA
-//#define QVM_DEBUG_LOAD
-//#define QVM_DEBUG_BUILD
-//#define QVM_DEBUG_FILTER
-//#define QVM_DEBUG_CACHE
-#endif
-
 
 #define DBG_NODE(p, root) (QString(p) + "node(key=" + QVariantDataInfo(root->keyInParent).displayText(1) + ", value=" + QVariantDataInfo(root->value).displayText(1) + ", type=" + QString::number(root->value.userType()) + "-" + root->value.typeName() + ")")
 #define DBG_NODE_CACHE(p, root) (QString(p) + "cache(TEXT: key=" + root->cache.key.text + ", value=" + root->cache.value.text + ", type=" + root->cache.type.text) << "; FLAGS: type=" << root->cache.key.flags << ", value=" << root->cache.value.flags << ", type=" << root->cache.type.flags << ")"
@@ -1351,6 +1342,98 @@ void QVariantModel::dumpModel(const QModelIndex& rootIndex,
     Q_UNUSED(prefix)
 #endif
 }
+
+//------------------------------------------------------------------------------
+
+#ifdef QVM_DEBUG_CHANGE_MODEL
+void QVariantModel::beginResetModel()
+{
+    qDebug() << "begin reset model";
+
+    QAbstractItemModel::beginResetModel();
+}
+
+void QVariantModel::beginInsertRows(
+        const QModelIndex &parent, int first, int last)
+{
+    node_t* pnode = mp_root.data();
+    if (parent.isValid())
+        pnode = static_cast<node_t*>(parent.internalPointer());
+    Q_ASSERT(pnode != nullptr);
+
+    qDebug() << "begin insert rows" << keyPath(pnode) << first << last;
+
+    QAbstractItemModel::beginInsertRows(parent, first, last);
+}
+
+void QVariantModel::beginRemoveRows(
+        const QModelIndex &parent, int first, int last)
+{
+    node_t* pnode = mp_root.data();
+    if (parent.isValid())
+        pnode = static_cast<node_t*>(parent.internalPointer());
+    Q_ASSERT(pnode != nullptr);
+
+    qDebug() << "begin remove rows" << keyPath(pnode) << first << last;
+
+    QAbstractItemModel::beginRemoveRows(parent, first, last);
+}
+
+bool QVariantModel::beginMoveRows(
+        const QModelIndex &sourceParent, int sourceFirst, int sourceLast,
+        const QModelIndex &destinationParent, int destinationRow)
+{
+    node_t* sourceNode = mp_root.data();
+    if (destinationParent.isValid())
+        sourceNode = static_cast<node_t*>(destinationParent.internalPointer());
+    Q_ASSERT(sourceNode != nullptr);
+
+    node_t* destinationNode = mp_root.data();
+    if (destinationParent.isValid())
+        destinationNode = static_cast<node_t*>(destinationParent.internalPointer());
+    Q_ASSERT(destinationNode != nullptr);
+
+    qDebug() << "begin move rows" << keyPath(sourceNode) << sourceFirst << sourceLast
+             << keyPath(destinationNode) << destinationRow;
+
+    bool canMove = QAbstractItemModel::beginMoveRows(
+                sourceParent, sourceFirst, sourceLast,
+                destinationParent, destinationRow);
+
+    if (canMove == false)
+        qDebug() << "cannot move rows";
+
+    return canMove;
+}
+
+void QVariantModel::endResetModel()
+{
+    qDebug() << "end reset model";
+
+    QAbstractItemModel::endResetModel();
+}
+
+void QVariantModel::endInsertRows()
+{
+    qDebug() << "end insert rows";
+
+    QAbstractItemModel::endInsertRows();
+}
+
+void QVariantModel::endRemoveRows()
+{
+    qDebug() << "end remove rows";
+
+    QAbstractItemModel::endRemoveRows();
+}
+
+void QVariantModel::endMoveRows()
+{
+    qDebug() << "end move rows";
+
+    QAbstractItemModel::endMoveRows();
+}
+#endif
 
 //==============================================================================
 

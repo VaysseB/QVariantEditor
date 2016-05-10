@@ -11,6 +11,17 @@
 #define QVARIANTMODEL_DEBUG
 
 
+#ifdef QVARIANTMODEL_DEBUG
+//#define QVM_DEBUG_MODEL_FUNC // index(), hasChildren(), rowCount()
+//#define QVM_DEBUG_DATA // flags(), data()
+//#define QVM_DEBUG_LOAD // canFetchMore(), loadNode()
+//#define QVM_DEBUG_BUILD // buildNode()
+//#define QVM_DEBUG_FILTER // isAcceptedNode()
+//#define QVM_DEBUG_CACHE // cached(), recachedTree(), flags(), data()
+//#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}()
+#endif
+
+
 class QVariantModelDataLoader;
 
 class QVariantModel : public QAbstractItemModel
@@ -155,6 +166,19 @@ protected:
     virtual bool filterValue(const QVariant& value) const;
     virtual bool filterType(int type) const;
     virtual bool filterOnDisplayText(const QString& text) const;
+
+
+#ifdef QVM_DEBUG_CHANGE_MODEL
+    void beginResetModel();
+    void beginInsertRows(const QModelIndex &parent, int first, int last);
+    void beginRemoveRows(const QModelIndex &parent, int first, int last);
+    bool beginMoveRows(const QModelIndex &sourceParent, int sourceFirst, int sourceLast,
+                       const QModelIndex &destinationParent, int destinationRow);
+    void endResetModel();
+    void endInsertRows();
+    void endRemoveRows();
+    void endMoveRows();
+#endif
 
     //    void invalidateSubTree(QModelIndex index);
 
