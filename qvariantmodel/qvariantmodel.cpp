@@ -47,10 +47,8 @@ void QVariantModel::setRootDatas(const QVariantList &rootDatas)
     mp_root->parent = nullptr;
     mp_root->loaded = rootDatas.isEmpty();
 
-    if (mp_root->loaded == false) {
-        setLoadingHintNode(mp_root.data(), true);
+    if (mp_root->loaded == false)
         loadNode(QModelIndex(), mp_root.data(), NoChangedSignalsEmitted);
-    }
 
     endResetModel();
 
@@ -75,31 +73,6 @@ void QVariantModel::clearChildren(node_t* root, int reserveSize)
         delete child;
     }
     root->children.reserve(reserveSize);
-}
-
-void QVariantModel::setLoadingHintNode(node_t *node, bool enable)
-{
-    Q_ASSERT(node);
-    Q_ASSERT((node->hintNode != nullptr) ^ enable);
-    if (node->hintNode && enable == false) {
-        delete node->hintNode;
-        node->hintNode = nullptr;
-    }
-    else if (node->hintNode == nullptr && enable) {
-        node->hintNode = new node_t;
-        node->hintNode->parent = node;
-        node->hintNode->loaded = true;
-
-        Qt::ItemFlags fls = Qt::ItemIsSelectable | Qt::ItemIsEnabled;
-        node->hintNode->cache.key.flags = fls;
-        node->hintNode->cache.value.flags = fls;
-        node->hintNode->cache.type.flags = fls;
-
-        QString txt = tr("Data loading...");
-        node->hintNode->cache.key.text = txt;
-        node->hintNode->cache.value.text = txt;
-        node->hintNode->cache.type.text = txt;
-    }
 }
 
 QString QVariantModel::keyPath(const node_t* node)
@@ -284,7 +257,6 @@ void QVariantModel::loadNode(const QModelIndex& parent,
     Q_ASSERT((pnode->parent != nullptr) ^ (pnode == hidden_root));
 
     Q_ASSERT(pnode->loaded == false);
-    Q_ASSERT(pnode->hintNode != nullptr);
 
 #ifdef QVM_DEBUG_LOAD
     qDebug().nospace()
@@ -383,19 +355,6 @@ void QVariantModel::loadNode(const QModelIndex& parent,
     }
 
     Q_ASSERT(pnode->loader != nullptr);
-
-    // we remove the "please wait data are loading" row
-    // if node load ended
-    if (pnode->loaded) {
-        int count = qMax(1, pnode->visibleChildren.count());
-        if (canModifyModel)
-            beginRemoveRows(parent, count-1, count-1);
-
-        setLoadingHintNode(pnode, false);
-
-        if (canModifyModel)
-            endRemoveRows();
-    }
 
     // add the created children if any
     int createdCount = newlyCreatedChildren.count();
@@ -511,21 +470,12 @@ QModelIndex QVariantModel::index(int row, int column,
 
 #ifdef QVM_DEBUG_MODEL_FUNC
     qDebug() << "index" << row << column << parent.data()
-             << keyPath(pnode)
-             << (pnode == mp_root.data() ? "isRoot" : "notRoot");
+             << keyPath(pnode);
 #endif
-
-
-    // if node not fully loaded AND want the last children -> return hint node
-    if (pnode->loaded == false && row == pnode->visibleChildren.count()) {
-        Q_ASSERT(pnode->hintNode != nullptr); // cannot be null, it is nonsense
-        return createIndex(row, column, pnode->hintNode);
-    }
 
     int childrenCount = pnode->visibleChildren.count();
     Q_UNUSED(childrenCount); // avoid warning if no assert
-    Q_ASSERT(row >= 0 && row < childrenCount);
-
+    Q_ASSERT(row < childrenCount);
     return createIndex(row, column, pnode->visibleChildren.at(row));
 }
 
@@ -551,7 +501,6 @@ bool QVariantModel::hasChildren(const QModelIndex& parent) const
 #ifdef QVM_DEBUG_MODEL_FUNC
     qDebug() << "hasChildren"
              << keyPath(pnode)
-             << (pnode == mp_root.data() ? "isRoot" : "notRoot")
              << (pnode->loaded ? !pnode->visibleChildren.isEmpty() : true);
 #endif
 
@@ -572,15 +521,11 @@ int QVariantModel::rowCount(const QModelIndex& parent) const
 #ifdef QVM_DEBUG_MODEL_FUNC
     qDebug() << "rowCount"
              << keyPath(pnode)
-             << (pnode == mp_root.data() ? "isRoot" : "notRoot")
              << pnode->visibleChildren.count()
              << (pnode->loaded ? "loaded" : "notLoaded");
 #endif
 
     int count = pnode->visibleChildren.count();
-    // if still loading, add a loading hint node
-    if (pnode->loaded == false)
-        count++;
     return count;
 }
 
@@ -607,8 +552,7 @@ Qt::ItemFlags QVariantModel::flags(const QModelIndex& index) const
 
 #ifdef QVM_DEBUG_DATA
     qDebug() << "flags" << index.row() << index.column()
-             << " key:" << keyPath(node)
-             << (node == node->parent->hintNode ? "hintNode" : "\0");
+             << " key:" << keyPath(node);
 #ifdef QVM_DEBUG_CACHE
     qDebug().nospace() << "cache flags key:" << node->cache.key.flags
                        << " value:" << node->cache.value.flags
@@ -663,8 +607,7 @@ QVariant QVariantModel::data(const QModelIndex& index, int role) const
 
 #ifdef QVM_DEBUG_DATA
     qDebug() << "data" << index.row() << index.column() << role
-             << " key:" << keyPath(node)
-             << (node == node->parent->hintNode ? "hintNode" : "\0");
+             << " key:" << keyPath(node);
 #ifdef QVM_DEBUG_CACHE
     qDebug().nospace() << "cache text key:" << node->cache.key.text
                        << " value:" << node->cache.value.text
@@ -1676,11 +1619,8 @@ void QVariantModelDataLoader::buildNode()
         // if doesn't required to load something
         child->loaded = true;
         QVariantDataInfo childDInfo(child->value);
-        if (childDInfo.isContainer() && childDInfo.isEmptyContainer() == false) {
+        if (childDInfo.isContainer() && childDInfo.isEmptyContainer() == false)
             child->loaded = false;
-            // we insert the "please wait data are loading" row
-            Model::setLoadingHintNode(child, true);
-        }
 
 #ifdef QVM_DEBUG_BUILD
         childrenCount++;
