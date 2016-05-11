@@ -40,6 +40,10 @@ class QVariantModel : public QAbstractItemModel
     enum {
         NoChangedSignalsEmitted = 0, // used as bool
         EmitChangedSignals = 1, // used as bool
+        Hidden = 0, // used as bool
+        Visible = 1, // used as bool
+        ShowOnlyChildren = 1, // used as bool
+        HideOnlyChildren = 1, // used as bool
         SizeLimitToLoadAsync = 200, // used as int
         SizeLimitBetterResetWhenDataChanged = 500 // used as int
     };
@@ -195,9 +199,8 @@ protected:
 private:
     QModelIndex createIndex(int row, int column, node_t* node) const;
 
-    void loadNode(const QModelIndex &parent,
-                  node_t* pnode,
-                  bool canModifyModel = true);
+    void loadNode(node_t* pnode, bool canModifyModel = true);
+
     static void invalidateOrder(node_t* node, int start = 0, int length = -1);
     static void cached(node_t* node,
                        int textDepth,
@@ -220,6 +223,12 @@ private:
     bool isAcceptedNode(node_t* node) const;
     void filterTree(node_t* node, bool canModifyModel = true);
 
+    void resetNode(node_t* node, bool visible);
+    void resetShowNode(node_t* node, bool canModifyModel = true,
+                  bool showOnlyChildren = false);
+    void resetHideNode(node_t* node, bool canModifyModel = true,
+                  bool hideOnlyChildren = false);
+    static void setNodeVisibility(node_t* node, bool visible);
     static void setTreeVisibility(node_t* node, bool visible);
 
     void dumpTree(const node_t *root = nullptr,
