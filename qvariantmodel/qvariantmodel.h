@@ -31,7 +31,7 @@ class QVariantModel : public QAbstractItemModel
     Q_PROPERTY(uint displayDepth READ displayDepth WRITE setDisplayDepth NOTIFY displayDepthChanged)
     Q_PROPERTY(bool dynamicSort READ dynamicSort WRITE setDynamicSort NOTIFY dynamicSortChanged)
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
-    Q_PROPERTY(FilterType filterTypeColumn READ filterTypeColumn WRITE setFilterType NOTIFY filterTypeChanged)
+    Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(Columns filterColumns READ filterColumns WRITE setFilterColumns NOTIFY filterColumnsChanged)
 
     friend class QVariantModelDataLoader;
@@ -145,7 +145,7 @@ public:
     QVariantList rootDatas() const;
     inline uint displayDepth() const { return m_depth; }
     inline bool dynamicSort() const { return m_dynamicSort; }
-    inline FilterType filterTypeColumn() const { return m_filterType; }
+    inline FilterType filterType() const { return m_filterType; }
     inline Columns filterColumns() const { return m_filterColumns; }
     inline QString filterText() const { return m_filterRx.pattern(); }
 

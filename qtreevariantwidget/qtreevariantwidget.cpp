@@ -48,15 +48,22 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
             QVariantModel::Fixed);
     ui->comboFilterType->setCurrentIndex(0);
 
-    // search options
     void (QComboBox::* currentIndexChangedPtr)(int)
             = &QComboBox::currentIndexChanged;
+    void (QTimer::* startPtr)()
+            = &QTimer::start;
+
+    // search timer
+    m_searchUpdateTimer.setSingleShot(false);
+    m_searchUpdateTimer.setInterval(300); // time before search is updated
+    connect(&m_searchUpdateTimer, &QTimer::timeout,
+            this, &QTreeVariantWidget::updateSearch);
+    connect(ui->lineSearch, &QLineEdit::textChanged,
+            &m_searchUpdateTimer, startPtr);
     connect(ui->comboFilterType, currentIndexChangedPtr,
-            this, &QTreeVariantWidget::searchTypeChanged);
+            &m_searchUpdateTimer, startPtr);
     connect(ui->comboFilterField, currentIndexChangedPtr,
-            this, &QTreeVariantWidget::searchFieldsChanged);
-    searchTypeChanged(ui->comboFilterType->currentIndex());
-    searchFieldsChanged(ui->comboFilterField->currentIndex());
+            &m_searchUpdateTimer, startPtr);
 
     // tree view options
     ui->treeView->setModel(mp_model.data());
@@ -90,15 +97,16 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
     header->setMinimumSectionSize(40);
     header->setDefaultSectionSize(120);
 
-    // connect search + options
-    connect(ui->lineSearch, &QLineEdit::textChanged,
-            mp_model.data(), &QVariantModel::setFilterText);
+    // connect options
     connect(ui->sliderDepth, &QSlider::valueChanged,
             mp_model.data(), &QVariantModel::setDisplayDepth);
 
     // init with value
     setFilename(QString());
     mp_model->setRootDatas(QVariantList());
+
+    // search options
+    updateSearch();
 }
 
 QTreeVariantWidget::~QTreeVariantWidget()
@@ -204,35 +212,45 @@ void QTreeVariantWidget::setSearchVisible(bool visible)
 {
     ui->widgetSearch->setVisible(visible);
 
-    // if was supposed to be searched
-    QString searchText = ui->lineSearch->text();
-    if (searchText.isEmpty() == false) {
-        // if became visible -> search active
-        if (visible)
-            mp_model->setFilterText(searchText);
-        // if became hidden -> search inactive
-        else
-            mp_model->setFilterText(QString());
-    }
+    updateSearch();
 }
 
-void QTreeVariantWidget::searchTypeChanged(int index)
+void QTreeVariantWidget::updateSearch()
 {
-    int itype = ui->comboFilterType->itemData(index).toInt();
-    mp_model->setFilterType((QVariantModel::FilterType) itype);
-}
+    m_searchUpdateTimer.stop();
 
-void QTreeVariantWidget::searchFieldsChanged(int index)
-{
-    QVariant vcol = ui->comboFilterField->itemData(index);
+    // cancel search
+    mp_model->setFilterText(QString());
+
+    bool searchEnabled = ui->widgetSearch->isVisible();
+    if (searchEnabled == false)
+        return;
+
+    // filter type
+    int indexType = ui->comboFilterType->currentIndex();
+    int itype = ui->comboFilterType->itemData(indexType).toInt();
+    QVariantModel::FilterType fType = (QVariantModel::FilterType) itype;
+    if (fType != mp_model->filterType())
+        mp_model->setFilterType(fType);
+
+    // filter columns
+    int indexField = ui->comboFilterField->currentIndex();
+    QVariant vcol = ui->comboFilterField->itemData(indexField);
+    int fColumns = 0;
     if (vcol.isNull()) {
-        mp_model->setFilterColumns(QVariantModel::KeyColumn
-                                   | QVariantModel::ValueColumn
-                                   | QVariantModel::TypeColumn);
+        fColumns = QVariantModel::KeyColumn
+                | QVariantModel::ValueColumn
+                | QVariantModel::TypeColumn;
     }
-    else {
-        mp_model->setFilterColumns((QVariantModel::Column)vcol.toInt());
-    }
+    else
+        fColumns = vcol.toInt();
+    if (fColumns != mp_model->filterColumns())
+        mp_model->setFilterColumns((QVariantModel::Columns)fColumns);
+
+    // filter text
+    QString fText = ui->lineSearch->text();
+    if (fText.isEmpty() == false)
+        mp_model->setFilterText(fText);
 }
 
 //------------------------------------------------------------------------------
@@ -424,4 +442,17 @@ void QTreeVariantWidget::removeCurrent()
             Q_ASSERT(isDataRemoved);
         }
     }
+}
+
+//------------------------------------------------------------------------------
+
+int QTreeVariantWidget::searchUpdateInterval() const
+{
+    return m_searchUpdateTimer.interval();
+}
+
+void QTreeVariantWidget::setSearchUpdateInterval(int msec)
+{
+    m_searchUpdateTimer.setInterval(msec);
+    emit searchUpdateIntervalChanged(msec);
 }
