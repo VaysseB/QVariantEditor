@@ -1238,7 +1238,7 @@ void QVariantModel::filterTree(node_t* node, bool canModifyModel)
     // actual filter
     if (isFilterEnabled()) {
         int amountToFilter = node->children.count();
-        bool betterReset = (amountToFilter >= 1);//(int)SizeLimitBetterResetWhenDataChanged);
+        bool betterReset = (amountToFilter >= (int)SizeLimitBetterResetWhenDataChanged);
 
         // if the best strategy is to wipe out node's visibles children rows
         // and then insert them later
