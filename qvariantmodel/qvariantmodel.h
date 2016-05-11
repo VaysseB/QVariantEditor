@@ -18,7 +18,7 @@
 //#define QVM_DEBUG_BUILD // buildNode()
 //#define QVM_DEBUG_FILTER // isAcceptedNode()
 //#define QVM_DEBUG_CACHE // cached(), recachedTree(), flags(), data()
-//#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filterTree() calls
+#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filterTree() calls
 #endif
 
 
@@ -219,6 +219,8 @@ private:
     bool isFilterEnabled() const;
     bool isAcceptedNode(node_t* node) const;
     void filterTree(node_t* node, bool canModifyModel = true);
+
+    static void setTreeVisibility(node_t* node, bool visible);
 
     void dumpTree(const node_t *root = nullptr,
                   const QString& prefix = QString()) const;

@@ -371,8 +371,9 @@ void QVariantModel::loadNode(const QModelIndex& parent,
         if (m_depth != pnode->loader->to_cache.displayDepth) {
             for (auto itChild = newlyCreatedChildren.constBegin();
                  itChild != newlyCreatedChildren.constEnd();
-                 ++itChild)
+                 ++itChild) {
                 recachedTree(*itChild, CacheText, NoChangedSignalsEmitted);
+            }
         }
 
         newlyCreatedChildren.clear();
@@ -384,18 +385,18 @@ void QVariantModel::loadNode(const QModelIndex& parent,
             endInsertRows();
 
         // filter & sort
-//#ifdef QVM_DEBUG_CHANGE_MODEL
-//        qDebug() << "begin filter"
-//                 << keyPath(pnode)
-//                 << (pnode->loaded ? "loaded" : "not_loaded")
-//                 << (isFilterEnabled() ? "select" : "clear")
-//                 << FILTER_TYPE_NAMES[m_filterType]
-//                    << m_filterRx.pattern();
-//#endif
-//        filterTree(pnode, canModifyModel);
-//#ifdef QVM_DEBUG_CHANGE_MODEL
-//        qDebug() << "end filter";
-//#endif
+#ifdef QVM_DEBUG_CHANGE_MODEL
+        qDebug() << "begin filter"
+                 << keyPath(pnode)
+                 << (pnode->loaded ? "loaded" : "not_loaded")
+                 << (isFilterEnabled() ? "select" : "clear")
+                 << FILTER_TYPE_NAMES[m_filterType]
+                    << m_filterRx.pattern();
+#endif
+        filterTree(pnode, canModifyModel);
+#ifdef QVM_DEBUG_CHANGE_MODEL
+        qDebug() << "end filter";
+#endif
     }
 
     // if node is loaded, we delete the loader
@@ -1263,7 +1264,7 @@ void QVariantModel::filterTree(node_t* node, bool canModifyModel)
     // actual filter
     if (isFilterEnabled()) {
         int amountToFilter = node->children.count();
-        bool betterReset = (amountToFilter >= (int)SizeLimitBetterResetWhenDataChanged);
+        bool betterReset = true || (amountToFilter >= (int)SizeLimitBetterResetWhenDataChanged);
 
         // if the best strategy is to wipe out node's visibles children rows
         // and then insert them later
@@ -1273,12 +1274,8 @@ void QVariantModel::filterTree(node_t* node, bool canModifyModel)
             else if (node->visibleChildren.isEmpty() == false) {
                 beginRemoveRows(indexForNode(node), 0,
                                 node->visibleChildren.count()-1);
-                for (auto itChild = node->visibleChildren.begin();
-                     itChild != node->visibleChildren.end(); ++itChild) {
-                    node_t* child = *itChild;
-                    child->visible = false;
-                }
-                node->visibleChildren.clear();
+                setTreeVisibility(node, false);
+                node->visible = true; // setTreeVisibility will unset this
                 endRemoveRows();
             }
         }
@@ -1316,8 +1313,8 @@ void QVariantModel::filterTree(node_t* node, bool canModifyModel)
                                        node->parent->visibleChildren.count());
 
                 if (canModifyModel) {
-                    QModelIndex index = indexForNode(node);
-                    beginInsertRows(index.parent(), insertPos, insertPos);
+                    QModelIndex parent = indexForNode(node->parent);
+                    beginInsertRows(parent, insertPos, insertPos);
                 }
 
                 node->parent->visibleChildren.insert(insertPos, node);
@@ -1336,6 +1333,7 @@ void QVariantModel::filterTree(node_t* node, bool canModifyModel)
                 }
 
                 node->parent->visibleChildren.removeOne(node);
+                node->visible = false;
 
                 if (canModifyModel && betterReset == false)
                     endRemoveRows();
@@ -1356,14 +1354,7 @@ void QVariantModel::filterTree(node_t* node, bool canModifyModel)
                 beginResetModel();
         }
 
-        // filter children
-        for (auto itChild = node->children.begin();
-             itChild != node->children.end(); ++itChild) {
-            filterTree(*itChild, canModifyModel);
-        }
-
-        node->visibleChildren = node->children;
-        node->visible = true;
+        setTreeVisibility(node, true);
 
         if (node == mp_root.data()) {
             if (canModifyModel)
@@ -1375,6 +1366,22 @@ void QVariantModel::filterTree(node_t* node, bool canModifyModel)
     //            || (m_dynamicSort && sortPolicy == DynamicSortPolicy)) {
     //        sortTree(root, SortNodeOnly);
     //    }
+}
+
+void QVariantModel::setTreeVisibility(node_t* node, bool visible)
+{
+    Q_ASSERT(node);
+
+    node->visible = visible;
+    node->visibleChildren.clear();
+    if (visible)
+        node->visibleChildren = node->children;
+
+    // tree visit
+    for (auto itChild = node->children.begin();
+         itChild != node->children.end(); ++itChild) {
+        setTreeVisibility(*itChild, visible);
+    }
 }
 
 //------------------------------------------------------------------------------
