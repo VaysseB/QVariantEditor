@@ -19,6 +19,7 @@ QTreeVariantWidget::QTreeVariantWidget(QWidget *parent) :
 
     // model
     mp_model->setDynamicSort(true);
+    mp_model->setDynamicFilter(false);
     connect(mp_model.data(), &QVariantModel::rootDatasChanged,
             this, &QTreeVariantWidget::modelDataChanged);
 
@@ -212,15 +213,17 @@ void QTreeVariantWidget::setSearchVisible(bool visible)
 {
     ui->widgetSearch->setVisible(visible);
 
-    updateSearch();
+    if (visible)
+        updateSearch();
+    else {
+        mp_model->setFilterText(QString());
+        mp_model->filter();
+    }
 }
 
 void QTreeVariantWidget::updateSearch()
 {
     m_searchUpdateTimer.stop();
-
-    // cancel search
-    mp_model->setFilterText(QString());
 
     bool searchEnabled = ui->widgetSearch->isVisible();
     if (searchEnabled == false)
@@ -230,8 +233,7 @@ void QTreeVariantWidget::updateSearch()
     int indexType = ui->comboFilterType->currentIndex();
     int itype = ui->comboFilterType->itemData(indexType).toInt();
     QVariantModel::FilterType fType = (QVariantModel::FilterType) itype;
-    if (fType != mp_model->filterType())
-        mp_model->setFilterType(fType);
+    mp_model->setFilterType(fType);
 
     // filter columns
     int indexField = ui->comboFilterField->currentIndex();
@@ -244,13 +246,14 @@ void QTreeVariantWidget::updateSearch()
     }
     else
         fColumns = vcol.toInt();
-    if (fColumns != mp_model->filterColumns())
-        mp_model->setFilterColumns((QVariantModel::Columns)fColumns);
+    mp_model->setFilterColumns((QVariantModel::Columns)fColumns);
 
     // filter text
     QString fText = ui->lineSearch->text();
-    if (fText.isEmpty() == false)
-        mp_model->setFilterText(fText);
+    mp_model->setFilterText(fText);
+
+    // actual filter
+    mp_model->filter();
 }
 
 //------------------------------------------------------------------------------

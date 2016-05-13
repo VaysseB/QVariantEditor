@@ -18,7 +18,7 @@
 //#define QVM_DEBUG_BUILD // buildNode()
 //#define QVM_DEBUG_FILTER // isAcceptedNode()
 //#define QVM_DEBUG_CACHE // cached(), recachedTree(), flags(), data()
-//#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filterTree() calls
+//#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filter() + {show,hide}Node() + setTreeVisibility()
 #endif
 
 
@@ -30,6 +30,7 @@ class QVariantModel : public QAbstractItemModel
     Q_PROPERTY(QVariantList rootDatas READ rootDatas WRITE setRootDatas NOTIFY rootDatasChanged)
     Q_PROPERTY(uint displayDepth READ displayDepth WRITE setDisplayDepth NOTIFY displayDepthChanged)
     Q_PROPERTY(bool dynamicSort READ dynamicSort WRITE setDynamicSort NOTIFY dynamicSortChanged)
+    Q_PROPERTY(bool dynamicFilter READ dynamicFilter WRITE setDynamicFilter NOTIFY dynamicFilterChanged)
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
     Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(Columns filterColumns READ filterColumns WRITE setFilterColumns NOTIFY filterColumnsChanged)
@@ -42,8 +43,9 @@ class QVariantModel : public QAbstractItemModel
         EmitChangedSignals = 1, // used as bool
         Hidden = 0, // used as bool
         Visible = 1, // used as bool
-        ShowOnlyChildren = 1, // used as bool
-        HideOnlyChildren = 1, // used as bool
+        OnlyChildren = 1, // used as bool
+        InvalidateDirectChildrenOrder = 0, // used as bool
+        InvalidateTreeOrder = 1, // used as bool
         SizeLimitToLoadAsync = 200, // used as int
         SizeLimitBetterResetWhenDataChanged = 500 // used as int
     };
@@ -145,6 +147,7 @@ public:
     QVariantList rootDatas() const;
     inline uint displayDepth() const { return m_depth; }
     inline bool dynamicSort() const { return m_dynamicSort; }
+    inline bool dynamicFilter() const { return m_dynamicFilter; }
     inline FilterType filterType() const { return m_filterType; }
     inline Columns filterColumns() const { return m_filterColumns; }
     inline QString filterText() const { return m_filterRx.pattern(); }
@@ -155,6 +158,7 @@ signals:
     void rootDatasChanged();
     void displayDepthChanged(uint depth);
     void dynamicSortChanged(bool enabled);
+    void dynamicFilterChanged(bool enabled);
     void filterTypeChanged(FilterType filterTypeColumn);
     void filterColumnsChanged(Columns filterColumns);
     void filterTextChanged(const QString& filterText);
@@ -163,9 +167,12 @@ public slots:
     void setRootDatas(const QVariantList& rootDatas);
     void setDisplayDepth(uint depth);
     void setDynamicSort(bool enabled);
+    void setDynamicFilter(bool enabled);
     void setFilterType(FilterType filterTypeColumn);
     void setFilterColumns(Columns filterColumns);
     void setFilterText(const QString& filterText);
+
+    void filter();
 
 protected:
     virtual bool lessThan(const QVariant& left, const QVariant& right) const;
@@ -198,38 +205,36 @@ protected:
 
 private:
     QModelIndex createIndex(int row, int column, node_t* node) const;
+    QModelIndex indexForNode(node_t* node, int column) const;
+    QModelIndex indexForNode(node_t* node, Column col = KeyColumn) const;
 
-    void loadNode(node_t* pnode, bool canModifyModel = true);
+    void loadNode(node_t* pnode, bool canEmitChanges);
+    void filter(bool canEmitChanges);
 
-    static void invalidateOrder(node_t* node, int start = 0, int length = -1);
+    void invalidateOrder(node_t* node, int start = 0, int length = -1);
+    static void clearChildren(node_t* node, int reserveSize = 0);
     static void cached(node_t* node,
                        int textDepth,
                        CacheRoles roles = FullCache); // build cache
     void recachedTree(node_t* pnode,
                       CacheRoles roles = FullCache,
-                      bool canModifyModel = true); // rebuild cache text
+                      bool canEmitChanges = true); // rebuild cache text
 
-    static void clearChildren(node_t* node, int reserveSize = 0);
-    static QString keyPath(const node_t* node);
-
-    QModelIndex indexForNode(node_t* node, int column) const;
-    QModelIndex indexForNode(node_t* node, Column col = KeyColumn) const;
-
-    void updateFilterRx(QString pattern);
+    QString keyPath(const node_t* node) const;
 
     //    void sortTree(node_t& root, InternalSortStrategy sortStrategy);
 
     bool isFilterEnabled() const;
+    void updateFilterRx(QString pattern);
     bool isAcceptedNode(node_t* node) const;
-    void filterTree(node_t* node, bool canModifyModel = true);
+    void filterTree(node_t* node, bool canEmitChanges = true);
 
-    void resetNode(node_t* node, bool visible);
-    void resetShowNode(node_t* node, bool canModifyModel = true,
+    void showNode(node_t* node, bool canEmitChanges = true);
+    void showNodeAndChildren(node_t* node, bool canEmitChanges = true,
                   bool showOnlyChildren = false);
-    void resetHideNode(node_t* node, bool canModifyModel = true,
+    void hideNode(node_t* node, bool canEmitChanges = true,
                   bool hideOnlyChildren = false);
-    static void setNodeVisibility(node_t* node, bool visible);
-    static void setTreeVisibility(node_t* node, bool visible);
+    void setTreeVisibility(node_t* node, bool visible) const;
 
     void dumpTree(const node_t *root = nullptr,
                   const QString& prefix = QString()) const;
@@ -237,12 +242,15 @@ private:
                        const QString& prefix = QString()) const;
     void dumpModel(const QModelIndex& rootIndex = QModelIndex(),
                    const QString& prefix = QString()) const;
+    void fullConsistencyCheck() const;
+    void fullConsistencyCheck(node_t* node) const;
 
 private:
     QSharedPointer<node_t> mp_root;
 
     uint m_depth = 0;
     bool m_dynamicSort;
+    bool m_dynamicFilter;
     FilterType m_filterType = Contains;
     Columns m_filterColumns = AllColumns;
     QRegExp m_filterRx;
