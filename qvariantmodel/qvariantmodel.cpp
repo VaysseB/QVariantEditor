@@ -355,7 +355,10 @@ void QVariantModel::loadNode(node_t* pnode, bool canEmitChanges)
         pnode->children.append(newlyCreatedChildren);
 
         // filter & sort
-        filter(canEmitChanges);
+        if (isFilterEnabled())
+            filter(canEmitChanges);
+        else
+            showChildren(pnode, newlyCreatedChildren);
     }
 
     // if node is loaded, we delete the loader
@@ -404,6 +407,7 @@ QModelIndex QVariantModel::indexForNode(node_t* node, int column) const
     Q_ASSERT(node->visible);
     int row = 0;
     if (node->parent) {
+        Q_ASSERT(node->indexInParent >= 0); // to debug only
         // if we never looked for the index in parent
         if (node->indexInParent < 0)
             node->indexInParent = node->parent->visibleChildren.indexOf(node);
@@ -437,7 +441,9 @@ QModelIndex QVariantModel::index(int row, int column,
     int childrenCount = pnode->visibleChildren.count();
     Q_UNUSED(childrenCount); // avoid warning if no assert
     Q_ASSERT(row < childrenCount);
-    return createIndex(row, column, pnode->visibleChildren.at(row));
+    node_t* node = pnode->visibleChildren.at(row);
+    Q_ASSERT(node->indexInParent == row);
+    return createIndex(row, column, node);
 }
 
 QModelIndex QVariantModel::parent(const QModelIndex& child) const
@@ -616,250 +622,258 @@ int QVariantModel::column(Column column) const
 
 //------------------------------------------------------------------------------
 
-//void QVariantModel::invalidateSubTree(QModelIndex index)
-//{
-//    node_t* node = mp_root.data();
-//    if (index.isValid())
-//        node = static_cast<node_t*>(index.internalPointer());
-//    Q_ASSERT(node != nullptr);
+void QVariantModel::invalidateParents(const QModelIndex& index, bool canEmitChanges)
+{
+    node_t* node = mp_root.data();
+    if (index.isValid())
+        node = static_cast<node_t*>(index.internalPointer());
+    Q_ASSERT(node != nullptr);
 
-//    QVector<int> displayRole;
-//    displayRole << Qt::DisplayRole;
+    QVector<int> displayRole;
+    displayRole << Qt::DisplayRole;
 
-//    // update its parents
-//    while (node->parent != nullptr) {
-//        Q_ASSERT(index.isValid());
-//        Q_ASSERT(index.internalPointer() == node);
+    // update its parents
+    QModelIndex workIndex = index;
+    while (node->parent != nullptr) {
+        Q_ASSERT(workIndex.isValid());
+        Q_ASSERT(workIndex.internalPointer() == node);
 
-//        // change data in parent
-//        QMutableVariantDataInfo mutDInfoParent(node->parent->value);
-//        Q_ASSERT(mutDInfoParent.isContainer());
-//        Q_ASSERT(mutDInfoParent.editableValues());
-//        mutDInfoParent.setContainerValue(node->keyInParent,
-//                                         node->value);
+        // change data in parent
+        QMutableVariantDataInfo mutDInfoParent(node->parent->value);
+        Q_ASSERT(mutDInfoParent.isContainer());
+        Q_ASSERT(mutDInfoParent.editableValues());
+        mutDInfoParent.setContainerValue(node->keyInParent,
+                                         node->value);
 
-//        // next parent (because dataChanged must take the node's parent)
-//        node = node->parent;
-//        index = index.parent();
+        // update cache
+        cached(node, m_depth, CacheText);
 
-//        // update parent of index
-//        emit dataChanged(index, index, displayRole);
-//    }
-//}
+        // next parent (because dataChanged must take the node's parent)
+        node = node->parent;
+        workIndex = indexForNode(node->parent, ValueColumn);
 
-//bool QVariantModel::setData(const QModelIndex& index,
-//                            const QVariant& value,
-//                            int role)
-//{
-//    if (index.isValid() == false)
-//        return false;
-//    if (role != Qt::EditRole)
-//        return false;
+        // update parent of workIndex
+        if (canEmitChanges)
+            emit dataChanged(workIndex, workIndex, displayRole);
+    }
+}
 
-//    node_t* node = static_cast<node_t*>(index.internalPointer());
-//    Q_ASSERT(node != nullptr);
+bool QVariantModel::setData(const QModelIndex& index,
+                            const QVariant& value,
+                            int role)
+{
+    if (index.isValid() == false)
+        return false;
+    if (role != Qt::EditRole)
+        return false;
 
-//    // if no changes (fast comparison)
-//    if (node->value.toString().isEmpty() == false
-//            && node->value.toString() == value.toString())
-//        return true;
+    node_t* node = static_cast<node_t*>(index.internalPointer());
+    Q_ASSERT(node != nullptr);
 
-//    bool dataChanges = false;
+    // if no changes (fast comparison)
+    if (node->value.toString().isEmpty() == false
+            && node->value.toString() == value.toString())
+        return true;
 
-//    if (index.column() == column(KeyColumn)) {
-//        Q_ASSERT(node->parent != nullptr);
+    bool dataChanges = false;
 
-//        QVariant oldKey = node->keyInParent;
+    if (index.column() == column(KeyColumn)) {
+        Q_ASSERT(node->parent != nullptr);
 
-//        // update the value
-//        node->keyInParent = value;
+        QVariant oldKey = node->keyInParent;
 
-//        // update direct parent about node key
-//        QMutableVariantDataInfo mutDInfoParent(node->parent->value);
-//        Q_ASSERT(mutDInfoParent.isContainer());
-//        Q_ASSERT(mutDInfoParent.editableKeys());
-//        mutDInfoParent.setContainerKey(oldKey, node->keyInParent);
+        // update the value
+        node->keyInParent = value;
 
-//        // update the node index
-//        emit dataChanged(index, index, QVector<int>() << Qt::DisplayRole);
+        // update the cache
+        cached(node, m_depth);
 
-//        // update its parents
-//        invalidateSubTree(index.parent());
+        // update direct parent about node key
+        QMutableVariantDataInfo mutDInfoParent(node->parent->value);
+        Q_ASSERT(mutDInfoParent.isContainer());
+        Q_ASSERT(mutDInfoParent.editableKeys());
+        mutDInfoParent.setContainerKey(oldKey, node->keyInParent);
 
-//        // the order might changed if sort
-//        // do begin/end move rows
-//        if (m_dynamicSort)
-//            sortTree(*node->parent, SortNodeOnly);
+        // update the cache
+        cached(node->parent, m_depth);
 
-//        dataChanges = true;
-//    }
-//    else  if (index.column() == column(ValueColumn)) {
-//        Q_ASSERT(node->parent != nullptr);
-//        // when change value, type might change
+        // update the node index
+        emit dataChanged(index, index, QVector<int>() << Qt::DisplayRole);
 
-//        bool typeChanged = (node->value.userType() != value.userType());
+        // update its parents
+        invalidateParents(index.parent());
 
-//        // update the value
-//        node->value = value;
+        dataChanges = true;
+    }
+    else  if (index.column() == column(ValueColumn)) {
+        Q_ASSERT(node->parent != nullptr);
+        // when change value, type might change
 
-//        // emit the update of the row (we want to update value+type columns)
-//        QVector<int> roles = QVector<int>() << Qt::DisplayRole << role;
+        bool typeChanged = (node->value.userType() != value.userType());
 
-//        // update value column
-//        emit dataChanged(index, index, roles);
+        // update the value
+        node->value = value;
 
-//        // update type column if changed
-//        if (typeChanged) {
-//            QModelIndex typeIndex = indexForNode(node, TypeColumn);
-//            emit dataChanged(typeIndex, typeIndex, roles);
-//        }
+        // update the cache
+        cached(node, m_depth);
 
-//        // update its parents
-//        invalidateSubTree(index);
+        // emit the update of the row (we want to update value+type columns)
+        QVector<int> roles = QVector<int>() << Qt::DisplayRole << role;
 
-//        dataChanges = true;
-//    }
-//    else  if (index.column() == column(TypeColumn)) {
-//        Q_ASSERT(node->parent != nullptr);
-//        // when change type, value change automatically
+        // update value column
+        emit dataChanged(index, index, roles);
 
-//        // update the value and the type, as simple as this
-//        QVariantDataInfo dInfo(node->value);
-//        node->value = dInfo.tryConvert(value.type(), value.userType());
+        // update type column if changed
+        if (typeChanged) {
+            QModelIndex typeIndex = indexForNode(node, TypeColumn);
+            emit dataChanged(typeIndex, typeIndex, roles);
+        }
 
-//        // emit the update of the row (we want to update value+type columns)
-//        QVector<int> roles = QVector<int>() << Qt::DisplayRole << role;
+        // update its parents
+        invalidateParents(index);
 
-//        // update type column
-//        emit dataChanged(index, index, roles);
+        dataChanges = true;
+    }
+    else  if (index.column() == column(TypeColumn)) {
+        Q_ASSERT(node->parent != nullptr);
+        // when change type, value change automatically
 
-//        // update value column
-//        QModelIndex valueIndex = indexForNode(node, ValueColumn);
-//        emit dataChanged(valueIndex, valueIndex, roles);
+        // update the value and the type, as simple as this
+        QVariantDataInfo dInfo(node->value);
+        node->value = dInfo.tryConvert(value.type(), value.userType());
 
-//        // update its parents
-//        invalidateSubTree(index);
+        // update the cache
+        cached(node, m_depth);
 
-//        dataChanges = true;
-//    }
+        // emit the update of the row (we want to update value+type columns)
+        QVector<int> roles = QVector<int>() << Qt::DisplayRole << role;
 
-//    if (dataChanges)
-//        emit rootDatasChanged();
+        // update type column
+        emit dataChanged(index, index, roles);
 
-//    return dataChanges;
-//}
+        // update value column
+        QModelIndex valueIndex = indexForNode(node, ValueColumn);
+        emit dataChanged(valueIndex, valueIndex, roles);
 
-//bool QVariantModel::insertRows(int row, int count, const QModelIndex& parent)
-//{
-//    Q_ASSERT(row >= 0 && count >= 0 && row+count <= rowCount(parent)+1);
+        // update its parents
+        invalidateParents(index);
 
-//    bool dataInserted = true;
+        dataChanges = true;
+    }
 
-//    node_t* pnode = mp_root.data();
-//    if (parent.isValid())
-//        pnode = static_cast<node_t*>(parent.internalPointer());
-//    Q_ASSERT(pnode != nullptr);
+    if (dataChanges) {
+        emit rootDatasChanged();
 
-//    QMutableVariantDataInfo mutDInfo(pnode->value);
-//    Q_ASSERT(mutDInfo.isContainer());
-//    Q_ASSERT(mutDInfo.isNewKeyInsertable());
+        // re-filter
+        if (isFilterEnabled())
+            filterTree(node);
+    }
 
-//    int childrenCount = pnode->visibleChildren.count();
-//    Q_ASSERT(row >= 0 && row <= childrenCount); // row == count when append
+    // the order might changed if sort
+    // do begin/end move rows
+    //    if (m_dynamicSort)
+    //        sortTree(*node->parent, SortNodeOnly);
 
-//    // add as much rows needed
-//    while (count-- > 0) {
-//        node_t* beforeNode = pnode->visibleChildren.value(row, nullptr);
-//        QVariant beforeKey = beforeNode ? beforeNode->keyInParent : QVariant();
-//        mutDInfo.tryInsertNewKey(beforeKey, QVariant());
-//    }
+    return dataChanges;
+}
 
-//    // update all the keys (because the order might have changed with the new
-//    // key), rebuilding the node and all if its children
-//    // but first, we remove all rows, rebuild, and re-add rows
-//    beginRemoveRows(parent, 0, pnode->visibleChildren.count());
-//    pnode->visibleChildren.clear();
-//    endRemoveRows();
+bool QVariantModel::insertRows(int row, int count, const QModelIndex& parent)
+{
+    Q_ASSERT(row >= 0 && count >= 0 && row+count <= rowCount(parent)+1);
 
-//    rebuildNodeIncr(*pnode);
-//    filterTree(*pnode, NoSort); // filter now because row are not visible
+    bool dataInserted = true;
 
-//    // take temporary children that are will be visible
-//    QList<node_t*> visibleChildren;
-//    pnode->visibleChildren.swap(visibleChildren);
+    node_t* pnode = mp_root.data();
+    if (parent.isValid())
+        pnode = static_cast<node_t*>(parent.internalPointer());
+    Q_ASSERT(pnode != nullptr);
 
-//    beginInsertRows(parent, 0, visibleChildren.count());
-//    pnode->visibleChildren.swap(visibleChildren);
-//    endInsertRows();
+    QMutableVariantDataInfo mutDInfo(pnode->value);
+    Q_ASSERT(mutDInfo.isContainer());
+    Q_ASSERT(mutDInfo.isNewKeyInsertable());
 
-//    // now rows are visible, we can sort
-//    if (m_dynamicSort)
-//        sortTree(*pnode, SortNodeAndChildren);
+    int childrenCount = pnode->visibleChildren.count();
+    Q_ASSERT(row >= 0 && row <= childrenCount); // row == count when append
 
-//    // and update all parents
-//    invalidateSubTree(parent);
+    // update all the keys (because the order might have changed with the new
+    // key), rebuilding the node and all if its children
+    // but first, we remove all rows, rebuild, and re-add rows
+    hideNode(pnode, EmitChangedSignals, OnlyChildren);
 
-//    // data changes
-//    emit rootDatasChanged();
+    // add as much rows needed
+    while (count-- > 0) {
+        node_t* beforeNode = pnode->visibleChildren.value(row, nullptr);
+        QVariant beforeKey = beforeNode ? beforeNode->keyInParent : QVariant();
+        mutDInfo.tryInsertNewKey(beforeKey, QVariant());
+    }
 
-//    return dataInserted;
-//}
+    // update the cache
+    cached(pnode, m_depth);
 
-//bool QVariantModel::removeRows(int row, int count, const QModelIndex& parent)
-//{
-//    Q_ASSERT(row >= 0 && count >= 0 && row+count <= rowCount(parent));
+    // data changes
+    emit rootDatasChanged();
 
-//    bool dataRemoved = true;
+    // and update all parents
+    invalidateParents(parent);
 
-//    node_t* pnode = mp_root.data();
-//    if (parent.isValid())
-//        pnode = static_cast<node_t*>(parent.internalPointer());
-//    Q_ASSERT(pnode != nullptr);
+    // re-filter
+    filterTree(pnode);
 
-//    QMutableVariantDataInfo mutDInfo(pnode->value);
-//    Q_ASSERT(mutDInfo.isContainer());
-//    Q_ASSERT(mutDInfo.isKeyRemovable());
+    // now rows are visible, we can sort
+    //    if (m_dynamicSort)
+    //        sortTree(*pnode, SortNodeAndChildren);
 
-//    int childrenCount = pnode->visibleChildren.count();
-//    Q_ASSERT(row >= 0 && row+count <= childrenCount); // row == count when append
+    return dataInserted;
+}
 
-//    // remove as much rows asked
-//    while (count-- > 0) {
-//        node_t* node = pnode->visibleChildren.value(row+count, nullptr);
-//        Q_ASSERT(node != nullptr);
-//        mutDInfo.removeKey(node->keyInParent);
-//    }
+bool QVariantModel::removeRows(int row, int count, const QModelIndex& parent)
+{
+    Q_ASSERT(row >= 0 && count >= 0 && row+count <= rowCount(parent));
 
-//    // update all the keys (because the order might have changed after remove),
-//    // rebuilding the node and all if its children
-//    // but first, we remove all rows, rebuild, and re-add rows
-//    beginRemoveRows(parent, 0, pnode->visibleChildren.count());
-//    pnode->visibleChildren.clear();
-//    endRemoveRows();
+    bool dataRemoved = true;
 
-//    rebuildNodeIncr(*pnode);
-//    filterTree(*pnode, NoSort); // filter now because row are not visible
+    node_t* pnode = mp_root.data();
+    if (parent.isValid())
+        pnode = static_cast<node_t*>(parent.internalPointer());
+    Q_ASSERT(pnode != nullptr);
 
-//    // take temporary children that are will be visible
-//    QList<node_t*> visibleChildren;
-//    pnode->visibleChildren.swap(visibleChildren);
+    QMutableVariantDataInfo mutDInfo(pnode->value);
+    Q_ASSERT(mutDInfo.isContainer());
+    Q_ASSERT(mutDInfo.isKeyRemovable());
 
-//    beginInsertRows(parent, 0, visibleChildren.count());
-//    pnode->visibleChildren.swap(visibleChildren);
-//    endInsertRows();
+    int childrenCount = pnode->visibleChildren.count();
+    Q_ASSERT(row >= 0 && row+count <= childrenCount); // row == count when append
 
-//    // now rows are visible, we can sort
-//    if (m_dynamicSort)
-//        sortTree(*pnode, SortNodeAndChildren);
+    // update all the keys (because the order might have changed with the new
+    // key), rebuilding the node and all if its children
+    // but first, we remove all rows, rebuild, and re-add rows
+    hideNode(pnode, EmitChangedSignals, OnlyChildren);
 
-//    // and update all parents
-//    invalidateSubTree(parent);
+    // remove as much rows asked
+    while (count-- > 0) {
+        node_t* node = pnode->visibleChildren.value(row+count, nullptr);
+        Q_ASSERT(node != nullptr);
+        mutDInfo.removeKey(node->keyInParent);
+    }
 
-//    // data changes
-//    emit rootDatasChanged();
+    // update the cache
+    cached(pnode, m_depth);
 
-//    return dataRemoved;
-//}
+    // data changes
+    emit rootDatasChanged();
+
+    // and update all parents
+    invalidateParents(parent);
+
+    // re-filter
+    filterTree(pnode);
+
+    // now rows are visible, we can sort
+    //    if (m_dynamicSort)
+    //        sortTree(*pnode, SortNodeAndChildren);
+
+    return dataRemoved;
+}
 
 //------------------------------------------------------------------------------
 
@@ -1309,6 +1323,41 @@ void QVariantModel::showNode(node_t* node, bool canEmitChanges)
         endInsertRows();
 }
 
+void QVariantModel::showChildren(node_t* pnode, const QList<node_t *>& nodes,
+                                 bool canEmitChanges)
+{
+#ifdef QVM_DEBUG_CHANGE_MODEL
+    qDebug() << "show children" << keyPath(pnode) << nodes.count()
+             << (canEmitChanges ? "canEmitChanges" : "noChangesEmitted")
+             << (pnode && pnode->visible ? "visible" : "notVisible");
+#endif
+
+    if (pnode == nullptr)
+        return;
+
+    // make sure its parent parent is visible
+    showNode(pnode);
+
+    int count = nodes.count();
+    int insertPos = pnode->visibleChildren.count();
+    if (canEmitChanges) {
+        QModelIndex parent = indexForNode(pnode);
+        beginInsertRows(parent, insertPos, insertPos+count-1);
+    }
+
+    for (auto itChild = nodes.constBegin(); itChild != nodes.constEnd();
+         ++itChild) {
+        node_t* child = *itChild;
+        Q_ASSERT(pnode->children.contains(child));
+        child->visible = true;
+        child->indexInParent = insertPos;
+        pnode->visibleChildren.insert(insertPos++, child);
+    }
+
+    if (canEmitChanges)
+        endInsertRows();
+}
+
 void QVariantModel::showNodeAndChildren(
         node_t* node, bool canEmitChanges, bool showOnlyChildren)
 {
@@ -1717,7 +1766,7 @@ void QVariantModelDataLoader::buildNode()
     Model::clearChildren(node, keysCount);
 
 #ifdef QVM_DEBUG_BUILD
-    QString rootKeyStr = Model::keyPath(node);
+    QString rootKeyStr = keyPath(node);
     int childrenCount = 0;
     qDebug().nospace()
             << "build node key:" << rootKeyStr << " begin total: " << keysCount;
@@ -1783,4 +1832,17 @@ void QVariantModelDataLoader::buildNode()
             << " loaded: " << childrenCount
             << "/" << keysCount;
 #endif
+}
+
+
+QString QVariantModelDataLoader::keyPath(const node_t* node) const
+{
+    QString keyStr;
+    if (node == nullptr)
+        keyStr = QLatin1Literal("NULL");
+    else if (node->parent) {
+        keyStr = QVariantDataInfo(node->keyInParent).displayText(0);
+        keyStr.prepend("->").prepend(keyPath(node->parent));
+    }
+    return keyStr;
 }

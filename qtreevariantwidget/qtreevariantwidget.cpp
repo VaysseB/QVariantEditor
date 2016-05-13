@@ -215,7 +215,9 @@ void QTreeVariantWidget::setSearchVisible(bool visible)
 
     if (visible)
         updateSearch();
-    else {
+    else if (ui->lineSearch->text().isEmpty() == false) {
+        // if no more search, but it was previously seaching
+        // -> we cancel it
         mp_model->setFilterText(QString());
         mp_model->filter();
     }

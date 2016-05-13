@@ -15,10 +15,10 @@
 //#define QVM_DEBUG_MODEL_FUNC // index(), hasChildren(), rowCount()
 //#define QVM_DEBUG_DATA // flags(), data()
 //#define QVM_DEBUG_LOAD // canFetchMore(), loadNode()
-//#define QVM_DEBUG_BUILD // buildNode()
+#define QVM_DEBUG_BUILD // buildNode()
 //#define QVM_DEBUG_FILTER // isAcceptedNode()
 //#define QVM_DEBUG_CACHE // cached(), recachedTree(), flags(), data()
-//#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filter() + {show,hide}Node() + setTreeVisibility()
+#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filter() + {show,hide}Node() + setTreeVisibility()
 #endif
 
 
@@ -135,9 +135,9 @@ public:
 
     // model datas
     QVariant data(const QModelIndex& index, int role) const;
-    //    bool setData(const QModelIndex& index, const QVariant& value, int role);
-    //    bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex());
-    //    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex());
+    bool setData(const QModelIndex& index, const QVariant& value, int role);
+    bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex());
+    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex());
 
     // model data loading
     void fetchMore(const QModelIndex &parent);
@@ -179,14 +179,14 @@ protected:
     virtual bool filterText(const QString& text) const;
     virtual bool filterData(const QVariant& value) const;
     virtual bool filterKeyColumn(const QString& cacheKey,
-                           const QVariant& key,
-                           bool nodeLoaded) const;
+                                 const QVariant& key,
+                                 bool nodeLoaded) const;
     virtual bool filterValueColumn(const QString& cacheValue,
-                             const QVariant& value,
-                             bool nodeLoaded) const;
+                                   const QVariant& value,
+                                   bool nodeLoaded) const;
     virtual bool filterTypeColumn(const QString& cacheType,
-                            int type,
-                            bool nodeLoaded) const;
+                                  int type,
+                                  bool nodeLoaded) const;
 
 
 #ifdef QVM_DEBUG_CHANGE_MODEL
@@ -201,7 +201,7 @@ protected:
     void endMoveRows();
 #endif
 
-    //    void invalidateSubTree(QModelIndex index);
+    void invalidateParents(const QModelIndex& index, bool canEmitChanges = true);
 
 private:
     QModelIndex createIndex(int row, int column, node_t* node) const;
@@ -230,8 +230,10 @@ private:
     void filterTree(node_t* node, bool canEmitChanges = true);
 
     void showNode(node_t* node, bool canEmitChanges = true);
+    void showChildren(node_t* pnode, const QList<node_t *>& nodes,
+                      bool canEmitChanges = true);
     void showNodeAndChildren(node_t* node, bool canEmitChanges = true,
-                  bool showOnlyChildren = false);
+                             bool showOnlyChildren = false);
     void hideNode(node_t* node, bool canEmitChanges = true,
                   bool hideOnlyChildren = false);
     void setTreeVisibility(node_t* node, bool visible) const;
@@ -287,6 +289,8 @@ public:
     struct {
         uint displayDepth = 0;
     } to_cache;
+
+    QString keyPath(const node_t* node) const;
 };
 
 #endif // QVARIANTMODEL_H
