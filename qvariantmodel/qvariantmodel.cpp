@@ -216,7 +216,7 @@ void QVariantModel::recachedTree(node_t* pnode,
 
     // first rebuild cache, then emit update (only if not tree root, because
     // this is useless as it is hidden)
-    if (pnode != mp_root.data())
+    if (pnode != mp_root)
         cached(pnode, m_depth, cacheRoles);
 
     for (auto it = pnode->visibleChildren.constBegin();
@@ -226,7 +226,7 @@ void QVariantModel::recachedTree(node_t* pnode,
 
     // emit update (only if not tree root, because
     // this is useless as it is hidden)
-    if (canEmitChanges && pnode != mp_root.data()) {
+    if (canEmitChanges && pnode != mp_root) {
         QVector<int> rolesChanged;
         if ((cacheRoles & CacheText))
             rolesChanged << Qt::DisplayRole;
@@ -451,7 +451,7 @@ QModelIndex QVariantModel::parent(const QModelIndex& child) const
     if (child.isValid()) {
         node_t* node = static_cast<node_t*>(child.internalPointer());
         Q_ASSERT(node != nullptr);
-        if (node->parent && node->parent != mp_root.data())
+        if (node->parent && node->parent != mp_root)
             return indexForNode(node->parent, child.column());
     }
 
@@ -633,11 +633,7 @@ void QVariantModel::invalidateParents(const QModelIndex& index, bool canEmitChan
     displayRole << Qt::DisplayRole;
 
     // update its parents
-    QModelIndex workIndex = index;
-    while (node->parent != nullptr) {
-        Q_ASSERT(workIndex.isValid());
-        Q_ASSERT(workIndex.internalPointer() == node);
-
+    while (node->parent != nullptr && node != mp_root) {
         // change data in parent
         QMutableVariantDataInfo mutDInfoParent(node->parent->value);
         Q_ASSERT(mutDInfoParent.isContainer());
@@ -646,15 +642,15 @@ void QVariantModel::invalidateParents(const QModelIndex& index, bool canEmitChan
                                          node->value);
 
         // update cache
-        cached(node, m_depth, CacheText);
+        cached(node->parent, m_depth, CacheText);
 
-        // next parent (because dataChanged must take the node's parent)
+        if (canEmitChanges) {
+            QModelIndex parent = indexForNode(node->parent, ValueColumn);
+            emit dataChanged(parent, parent, displayRole);
+        }
+
+        // next parent
         node = node->parent;
-        workIndex = indexForNode(node->parent, ValueColumn);
-
-        // update parent of workIndex
-        if (canEmitChanges)
-            emit dataChanged(workIndex, workIndex, displayRole);
     }
 }
 
@@ -879,7 +875,7 @@ bool QVariantModel::removeRows(int row, int count, const QModelIndex& parent)
 
 QModelIndex QVariantModel::createIndex(int row, int column, node_t* node) const
 {
-    Q_ASSERT((node == nullptr) ^ (node != mp_root.data()));
+    Q_ASSERT((node == nullptr) ^ (node != mp_root));
     return QAbstractItemModel::createIndex(row, column, node);
 }
 
@@ -1615,7 +1611,7 @@ void QVariantModel::fullConsistencyCheck(node_t* node) const
 {
     Q_ASSERT(node);
 
-    if (node != mp_root.data()) {
+    if (node != mp_root) {
         Q_ASSERT(node->parent != nullptr);
         Q_ASSERT(node->visible == node->parent->visibleChildren.contains(node));
         if (node->visible)
