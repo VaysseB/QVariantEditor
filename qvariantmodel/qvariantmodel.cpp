@@ -493,7 +493,7 @@ void QVariantModel::unloadChildren(node_t* node, bool canEmitChanges)
             node->children.removeOne(child);
             clearChildren(child);
             child->parent = nullptr;
-//            delete child;
+            delete child;
         }
     }
 
@@ -1870,9 +1870,9 @@ void QVariantModelDataLoader::buildNode()
     Q_ASSERT(dInfo.isContainer());
 
     QVariantList keys = dInfo.containerKeys();
-    int keysCount = keys.count();
 
 #ifdef QVM_DEBUG_BUILD
+    int keysCount = keys.count();
     QString rootKeyStr = keyPath(node);
     int childrenCount = 0;
     qDebug().nospace() << "build node key: " << rootKeyStr

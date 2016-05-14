@@ -14,11 +14,11 @@
 #ifdef QVARIANTMODEL_DEBUG
 //#define QVM_DEBUG_MODEL_FUNC // index(), hasChildren(), rowCount()
 //#define QVM_DEBUG_DATA // flags(), data()
-#define QVM_DEBUG_LOAD // canFetchMore(), loadNode(), [un]loadChildren()
-#define QVM_DEBUG_BUILD // buildNode()
+//#define QVM_DEBUG_LOAD // canFetchMore(), loadNode(), [un]loadChildren()
+//#define QVM_DEBUG_BUILD // buildNode()
 //#define QVM_DEBUG_FILTER // isAcceptedNode()
 //#define QVM_DEBUG_CACHE // cached(), recachedTree(), flags(), data()
-#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filter() + {show,hide}Node() + setTreeVisibility()
+//#define QVM_DEBUG_CHANGE_MODEL // begin/end{Reset,Insert,Remove,Move}() + filter() + {show,hide}Node() + setTreeVisibility()
 #endif
 
 
