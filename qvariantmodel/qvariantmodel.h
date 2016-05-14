@@ -14,7 +14,7 @@
 #ifdef QVARIANTMODEL_DEBUG
 //#define QVM_DEBUG_MODEL_FUNC // index(), hasChildren(), rowCount()
 //#define QVM_DEBUG_DATA // flags(), data()
-//#define QVM_DEBUG_LOAD // canFetchMore(), loadNode()
+#define QVM_DEBUG_LOAD // canFetchMore(), loadNode(), [un]loadChildren()
 #define QVM_DEBUG_BUILD // buildNode()
 //#define QVM_DEBUG_FILTER // isAcceptedNode()
 //#define QVM_DEBUG_CACHE // cached(), recachedTree(), flags(), data()
@@ -201,14 +201,16 @@ protected:
     void endMoveRows();
 #endif
 
-    void invalidateParents(const QModelIndex& index, bool canEmitChanges = true);
+    void invalidateParentsData(const QModelIndex& index, bool canEmitChanges = true);
 
 private:
     QModelIndex createIndex(int row, int column, node_t* node) const;
     QModelIndex indexForNode(node_t* node, int column) const;
     QModelIndex indexForNode(node_t* node, Column col = KeyColumn) const;
 
-    void loadNode(node_t* pnode, bool canEmitChanges);
+    void loadNode(node_t* node, bool canEmitChanges);
+    void loadChildren(node_t* node, bool canEmitChanges = true);
+    void unloadChildren(node_t* node, bool canEmitChanges = true);
     void filter(bool canEmitChanges);
 
     void invalidateOrder(node_t* node, int start = 0, int length = -1);
@@ -229,13 +231,12 @@ private:
     bool isAcceptedNode(node_t* node) const;
     void filterTree(node_t* node, bool canEmitChanges = true);
 
-    void showNode(node_t* node, bool canEmitChanges = true);
-    void showChildren(node_t* pnode, const QList<node_t *>& nodes,
+    void showPathToNode(node_t* node, bool canEmitChanges = true);
+    void hidePathsFromNode(node_t* node, bool canEmitChanges = true);
+    void showDirectChildren(node_t* node, const QList<node_t *>& nodes,
                       bool canEmitChanges = true);
-    void showNodeAndChildren(node_t* node, bool canEmitChanges = true,
-                             bool showOnlyChildren = false);
-    void hideNode(node_t* node, bool canEmitChanges = true,
-                  bool hideOnlyChildren = false);
+    void showLoadedChildren(node_t* node, bool canEmitChanges = true);
+    void hideChildren(node_t* node, bool canEmitChanges = true);
     void setTreeVisibility(node_t* node, bool visible) const;
 
     void dumpTree(const node_t *root = nullptr,
@@ -280,6 +281,7 @@ public:
 
     node_t* node;
     QMutex mutex; // mutex for `createdChildren` and `isDone`
+    QList<QVariant> excludedKeys;
 
     struct {
         QList<node_t*> createdChildren;
